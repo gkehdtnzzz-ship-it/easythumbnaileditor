@@ -1,6 +1,6 @@
-# Easy Thumbnail Editor
+# ThumbFit
 
-Easy Thumbnail Editor is a static browser-based image editor for thumbnail, profile, store, and app listing assets. It supports live previews, manual resizing, drag positioning, file conversion, and 3x3 image splitting.
+ThumbFit is a static browser-based image editor for thumbnail, profile, store, and app listing assets. It supports live previews, manual resizing, drag positioning, file conversion, and 3x3 image splitting.
 
 ## Main Features
 
@@ -54,7 +54,7 @@ Run these commands after creating the GitHub repository:
 ```bash
 git init
 git add .
-git commit -m "Initial Easy Thumbnail Editor site"
+git commit -m "Initial ThumbFit site"
 git branch -M main
 git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git
 git push -u origin main

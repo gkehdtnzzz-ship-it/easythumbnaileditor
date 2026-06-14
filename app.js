@@ -1,6 +1,6 @@
 const i18n = {
   en: {
-    appTitle: "Easy Thumbnail Editor",
+    appTitle: "ThumbFit",
     themeWhite: "White",
     themeIvory: "Ivory",
     themeDark: "Dark",
