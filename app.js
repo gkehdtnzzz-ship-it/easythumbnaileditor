@@ -1880,7 +1880,7 @@ function initSpriteTool() {
     { id: "godot-32", label: "Godot Pixel", size: "32 x 32", width: 32, height: 32, sourceWidth: 32, sourceHeight: 32, anchor: "bottom" },
     { id: "godot-64", label: "Godot Character", size: "64 x 64", width: 64, height: 64, sourceWidth: 64, sourceHeight: 64, anchor: "bottom" },
     { id: "rpg-maker-vx", label: "RPG Maker VX/Ace", size: "32 x 32", width: 32, height: 32, sourceWidth: 32, sourceHeight: 32, anchor: "bottom" },
-    { id: "rpg-maker-mv", label: "RPG Maker MV/MZ", size: "48 x 48", width: 48, height: 48, sourceWidth: 48, sourceHeight: 48, anchor: "bottom" },
+    { id: "rpg-maker-mv", label: "RPG Maker MV/MZ", size: "48 x 48", width: 48, height: 48, sourceWidth: 32, sourceHeight: 48, anchor: "bottom" },
     { id: "rpg-maker-xp", label: "RPG Maker XP", size: "32 x 48", width: 32, height: 48, sourceWidth: 32, sourceHeight: 48, anchor: "bottom" },
     { id: "nekoland-96", label: "Nekoland", size: "96 x 96", width: 96, height: 96, sourceWidth: 32, sourceHeight: 48, anchor: "bottom" },
     { id: "custom", label: "Custom", size: "Direct input", width: 64, height: 64, sourceWidth: 64, sourceHeight: 64, anchor: "center" }
@@ -2064,6 +2064,13 @@ function initSpriteTool() {
     const sourceWidth = spriteState.image.naturalWidth;
     const sourceHeight = spriteState.image.naturalHeight;
     const candidates = [];
+    const officialLayout = getOfficialSpriteLayout(sourceWidth, sourceHeight);
+
+    if (officialLayout) {
+      spriteEls.sourceWidthInput.value = String(officialLayout.width);
+      spriteEls.sourceHeightInput.value = String(officialLayout.height);
+      return;
+    }
 
     if (
       sourceWidth % presetSourceWidth === 0
@@ -2166,6 +2173,19 @@ function initSpriteTool() {
     const best = candidates[0];
     spriteEls.sourceWidthInput.value = String(best.width);
     spriteEls.sourceHeightInput.value = String(best.height);
+  }
+
+  function getOfficialSpriteLayout(sourceWidth, sourceHeight) {
+    const layouts = [
+      { width: 32, height: 48, cols: 4, rows: 4 },
+      { width: 48, height: 48, cols: 3, rows: 4 },
+      { width: 32, height: 32, cols: 3, rows: 4 },
+      { width: 32, height: 48, cols: 3, rows: 4 }
+    ];
+    return layouts.find((layout) => (
+      sourceWidth === layout.width * layout.cols
+      && sourceHeight === layout.height * layout.rows
+    )) || null;
   }
 
   function getSpriteFrameSplitRatio(image, frameWidth, frameHeight) {
