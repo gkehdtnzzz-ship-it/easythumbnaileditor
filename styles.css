@@ -383,11 +383,15 @@ body[data-active-tool="sprite"] #downloadButton {
   height: auto;
   max-width: none;
   max-height: none;
-  image-rendering: pixelated;
+  image-rendering: auto;
   border: 1px solid var(--line);
   background: transparent;
   box-shadow: var(--shadow);
   flex: 0 0 auto;
+}
+
+#spriteCanvas.is-pixelated {
+  image-rendering: pixelated;
 }
 
 .sprite-preview-panel {
@@ -405,6 +409,7 @@ body[data-active-tool="sprite"] #downloadButton {
   display: grid;
   place-items: center;
   min-height: 220px;
+  padding: 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--mock-soft);
@@ -415,6 +420,37 @@ body[data-active-tool="sprite"] #downloadButton {
   color: var(--muted);
   font-size: 13px;
   font-weight: 800;
+}
+
+#spriteAnimationCanvas {
+  display: none;
+  width: min(100%, 320px);
+  height: auto;
+  max-height: 320px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background:
+    linear-gradient(45deg, rgba(127, 145, 160, 0.18) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(127, 145, 160, 0.18) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(127, 145, 160, 0.18) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(127, 145, 160, 0.18) 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+  image-rendering: auto;
+}
+
+.sprite-action-preview.is-playing #spriteAnimationCanvas {
+  display: block;
+}
+
+.sprite-action-preview.is-playing span {
+  display: none;
+}
+
+.sprite-preview-panel.is-pixelated #spriteAnimationCanvas,
+.sprite-preview-panel.is-pixelated .sprite-action-strip img,
+.sprite-preview-panel.is-pixelated .sprite-step img {
+  image-rendering: pixelated;
 }
 
 .sprite-action-strip {
@@ -430,7 +466,7 @@ body[data-active-tool="sprite"] #downloadButton {
   height: auto;
   max-width: 180px;
   max-height: 180px;
-  image-rendering: pixelated;
+  image-rendering: auto;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: transparent;
@@ -449,7 +485,7 @@ body[data-active-tool="sprite"] #downloadButton {
 .sprite-step img {
   max-width: 86%;
   max-height: 90%;
-  image-rendering: pixelated;
+  image-rendering: auto;
 }
 
 .sprite-step:nth-child(2),

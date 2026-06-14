@@ -248,6 +248,7 @@
             <label>Padding <input id="spritePaddingInput" type="number" min="0" step="1" value="4"></label>
             <label>Scale % <input id="spriteScaleInput" type="number" min="1" step="1" value="100"></label>
             <label>Preview Row <input id="spriteRowInput" type="number" min="1" step="1" value="1"></label>
+            <label>Animation FPS <input id="spriteFpsInput" type="number" min="1" max="30" step="1" value="8"></label>
             <label>Canvas Zoom <input id="spriteZoomInput" type="number" min="25" max="800" step="25" value="100"></label>
           </div>
         </div>
@@ -267,6 +268,7 @@
           </div>
           <label class="check-row"><input id="spriteTrimInput" type="checkbox" checked> Auto trim transparent border</label>
           <label class="check-row"><input id="spriteGuideInput" type="checkbox" checked> Show center and foot guide</label>
+          <label class="check-row"><input id="spriteSmoothInput" type="checkbox" checked> Smooth preview for clean image quality</label>
         </div>
 
         <button class="primary-button sprite-download-button" id="spriteDownloadButton" type="button">Download Sprite PNG</button>
@@ -290,7 +292,8 @@
           <span id="spritePreviewStatus">waiting</span>
         </div>
         <div class="sprite-action-preview" id="spriteActionPreview">
-          <span>Upload a sprite sheet to preview one action row.</span>
+          <canvas id="spriteAnimationCanvas" width="64" height="64"></canvas>
+          <span id="spriteAnimationEmpty">Upload a sprite sheet to preview one action row.</span>
         </div>
         <div class="sprite-walk-preview" id="spriteWalkPreview"></div>
         <div class="sprite-info-card">

@@ -1830,9 +1830,11 @@ function initSpriteTool() {
     paddingInput: document.querySelector("#spritePaddingInput"),
     scaleInput: document.querySelector("#spriteScaleInput"),
     rowInput: document.querySelector("#spriteRowInput"),
+    fpsInput: document.querySelector("#spriteFpsInput"),
     zoomInput: document.querySelector("#spriteZoomInput"),
     trimInput: document.querySelector("#spriteTrimInput"),
     guideInput: document.querySelector("#spriteGuideInput"),
+    smoothInput: document.querySelector("#spriteSmoothInput"),
     autoButton: document.querySelector("#spriteAutoButton"),
     sourceInfo: document.querySelector("#spriteSourceInfo"),
     canvasInfo: document.querySelector("#spriteCanvasInfo"),
@@ -1841,6 +1843,9 @@ function initSpriteTool() {
     tool: document.querySelector("#spriteTool"),
     preview: document.querySelector("#spriteWalkPreview"),
     actionPreview: document.querySelector("#spriteActionPreview"),
+    actionCanvas: document.querySelector("#spriteAnimationCanvas"),
+    actionEmpty: document.querySelector("#spriteAnimationEmpty"),
+    previewPanel: document.querySelector(".sprite-preview-panel"),
     previewStatus: document.querySelector("#spritePreviewStatus"),
     downloadButton: document.querySelector("#spriteDownloadButton")
   };
@@ -1848,6 +1853,7 @@ function initSpriteTool() {
   if (!spriteEls.canvas) return;
 
   const spriteCtx = spriteEls.canvas.getContext("2d");
+  const actionCtx = spriteEls.actionCanvas?.getContext("2d");
   const spritePresets = [
     { id: "unity-64", label: "Unity 2D", size: "64 x 64", width: 64, height: 64, anchor: "bottom" },
     { id: "unity-128", label: "Unity HD", size: "128 x 128", width: 128, height: 128, anchor: "bottom" },
@@ -1866,7 +1872,9 @@ function initSpriteTool() {
     imageName: "sprite",
     bbox: null,
     renderDataUrl: "",
-    zoom: 1
+    zoom: 1,
+    animationTimer: null,
+    animationIndex: 0
   };
 
   spriteEls.tabs.forEach((button) => {
@@ -1926,6 +1934,7 @@ function initSpriteTool() {
     });
   });
   spriteEls.rowInput.addEventListener("input", renderSprite);
+  spriteEls.fpsInput.addEventListener("input", renderSpriteActionPreview);
   spriteEls.zoomInput.addEventListener("input", () => {
     spriteState.zoom = clampSpriteZoom(Number(spriteEls.zoomInput.value) / 100 || 1);
     applySpriteCanvasZoom();
@@ -1938,7 +1947,7 @@ function initSpriteTool() {
     spriteEls.zoomInput.value = String(Math.round(spriteState.zoom * 100));
     applySpriteCanvasZoom();
   }, { passive: false });
-  [...document.querySelectorAll("input[name='spriteAnchor'], input[name='spriteFit']"), spriteEls.trimInput, spriteEls.guideInput].forEach((input) => {
+  [...document.querySelectorAll("input[name='spriteAnchor'], input[name='spriteFit']"), spriteEls.trimInput, spriteEls.guideInput, spriteEls.smoothInput].forEach((input) => {
     input.addEventListener("change", renderSprite);
   });
   spriteEls.autoButton.addEventListener("click", () => {
@@ -1992,17 +2001,19 @@ function initSpriteTool() {
     spriteEls.canvas.height = height;
     spriteEls.presetMeta.textContent = `${width} x ${height}`;
     syncSpriteRows();
+    syncSpriteRenderMode();
     spriteCtx.clearRect(0, 0, width, height);
     drawSpriteChecker(spriteCtx, width, height);
 
     if (!spriteState.image) {
+      stopSpriteAnimation();
       drawSpriteGuides(spriteCtx, width, height);
       spriteCtx.fillStyle = getComputedStyle(document.body).getPropertyValue("--muted").trim() || "#8a97a3";
       spriteCtx.font = `${Math.max(10, Math.floor(width / 8))}px sans-serif`;
       spriteCtx.textAlign = "center";
       spriteCtx.fillText("Upload", width / 2, height / 2);
       spriteEls.preview.innerHTML = "";
-      spriteEls.actionPreview.innerHTML = "<span>Upload a sprite sheet to preview one action row.</span>";
+      setSpriteActionEmpty("Upload a sprite sheet to preview one action row.");
       spriteEls.previewStatus.textContent = "waiting";
       spriteState.renderDataUrl = "";
       updateSpriteCanvasInfo(width, height);
@@ -2011,7 +2022,8 @@ function initSpriteTool() {
     }
 
     const draw = getSpriteDrawRect(width, height);
-    spriteCtx.imageSmoothingEnabled = false;
+    spriteCtx.imageSmoothingEnabled = isSpriteSmoothingEnabled();
+    spriteCtx.imageSmoothingQuality = "high";
     spriteCtx.drawImage(
       spriteState.image,
       draw.sx,
@@ -2026,10 +2038,12 @@ function initSpriteTool() {
     if (spriteEls.guideInput.checked) drawSpriteGuides(spriteCtx, width, height);
     spriteState.renderDataUrl = spriteEls.canvas.toDataURL("image/png");
     renderSpriteWalkPreview();
-    renderSpriteActionPreview();
+    const frameCount = renderSpriteActionPreview();
     updateSpriteCanvasInfo(width, height);
     applySpriteCanvasZoom();
-    spriteEls.previewStatus.textContent = `row ${getSpriteRow()} / ${getSpriteRowCount()} · ${width} x ${height}`;
+    spriteEls.previewStatus.textContent = frameCount
+      ? `playing row ${getSpriteRow()} / ${getSpriteRowCount()} - ${frameCount} frames @ ${clampSpriteFps(Number(spriteEls.fpsInput.value) || 8)} fps`
+      : `row ${getSpriteRow()} / ${getSpriteRowCount()} - ${width} x ${height}`;
   }
 
   function getSpriteDrawRect(width, height) {
@@ -2139,20 +2153,13 @@ function initSpriteTool() {
 
   function renderSpriteActionPreview() {
     const frames = getSelectedSpriteRowFrames();
-    spriteEls.actionPreview.innerHTML = "";
     if (!frames.length) {
-      spriteEls.actionPreview.innerHTML = "<span>No row frames detected for this cell size.</span>";
-      return;
+      stopSpriteAnimation();
+      setSpriteActionEmpty("No row frames detected for this cell size.");
+      return 0;
     }
-    const strip = document.createElement("div");
-    strip.className = "sprite-action-strip";
-    frames.forEach((src, index) => {
-      const img = document.createElement("img");
-      img.alt = `Selected action frame ${index + 1}`;
-      img.src = src;
-      strip.append(img);
-    });
-    spriteEls.actionPreview.append(strip);
+    startSpriteAnimation(frames);
+    return frames.length;
   }
 
   function getSelectedSpriteRowFrames() {
@@ -2175,7 +2182,8 @@ function initSpriteTool() {
     frameCanvas.width = cellWidth;
     frameCanvas.height = cellHeight;
     const frameCtx = frameCanvas.getContext("2d");
-    frameCtx.imageSmoothingEnabled = false;
+    frameCtx.imageSmoothingEnabled = isSpriteSmoothingEnabled();
+    frameCtx.imageSmoothingQuality = "high";
     frameCtx.drawImage(source, sx, sy, cellWidth, cellHeight, 0, 0, cellWidth, cellHeight);
 
     const bounds = spriteEls.trimInput.checked
@@ -2185,7 +2193,6 @@ function initSpriteTool() {
     output.width = cellWidth;
     output.height = cellHeight;
     const outputCtx = output.getContext("2d");
-    drawSpriteChecker(outputCtx, cellWidth, cellHeight);
     if (bounds.width > 0 && bounds.height > 0) {
       const padding = Math.max(0, Number(spriteEls.paddingInput.value) || 0);
       const manualScale = Math.max(1, Number(spriteEls.scaleInput.value) || 100) / 100;
@@ -2200,11 +2207,75 @@ function initSpriteTool() {
       const dh = Math.max(1, Math.round(bounds.height * scale));
       const dx = Math.round((cellWidth - dw) / 2);
       const dy = anchor === "bottom" ? Math.round(cellHeight - padding - dh) : Math.round((cellHeight - dh) / 2);
-      outputCtx.imageSmoothingEnabled = false;
+      outputCtx.imageSmoothingEnabled = isSpriteSmoothingEnabled();
+      outputCtx.imageSmoothingQuality = "high";
       outputCtx.drawImage(frameCanvas, bounds.x, bounds.y, bounds.width, bounds.height, dx, dy, dw, dh);
     }
-    if (spriteEls.guideInput.checked) drawSpriteGuides(outputCtx, cellWidth, cellHeight);
     return output.toDataURL("image/png");
+  }
+
+  function startSpriteAnimation(frameUrls) {
+    if (!spriteEls.actionCanvas || !actionCtx) return;
+    stopSpriteAnimation();
+    spriteEls.actionPreview.classList.add("is-playing");
+    spriteEls.actionEmpty.textContent = "";
+    const width = getSpriteWidth();
+    const height = getSpriteHeight();
+    spriteEls.actionCanvas.width = width;
+    spriteEls.actionCanvas.height = height;
+    const images = frameUrls.map((src) => {
+      const img = new Image();
+      img.src = src;
+      return img;
+    });
+    const fps = clampSpriteFps(Number(spriteEls.fpsInput.value) || 8);
+    spriteEls.fpsInput.value = String(fps);
+    spriteState.animationIndex = Math.min(spriteState.animationIndex, images.length - 1);
+    const drawFrame = () => {
+      const image = images[spriteState.animationIndex];
+      actionCtx.clearRect(0, 0, width, height);
+      drawSpriteChecker(actionCtx, width, height);
+      if (image.complete) {
+        actionCtx.imageSmoothingEnabled = isSpriteSmoothingEnabled();
+        actionCtx.imageSmoothingQuality = "high";
+        actionCtx.drawImage(image, 0, 0, width, height);
+      }
+      spriteState.animationIndex = (spriteState.animationIndex + 1) % images.length;
+    };
+    drawFrame();
+    spriteState.animationTimer = window.setInterval(drawFrame, 1000 / fps);
+    spriteEls.previewStatus.textContent = `playing ${images.length} frames @ ${fps} fps`;
+  }
+
+  function stopSpriteAnimation() {
+    if (spriteState.animationTimer) {
+      window.clearInterval(spriteState.animationTimer);
+      spriteState.animationTimer = null;
+    }
+    spriteState.animationIndex = 0;
+    if (spriteEls.actionCanvas && actionCtx) {
+      actionCtx.clearRect(0, 0, spriteEls.actionCanvas.width, spriteEls.actionCanvas.height);
+    }
+  }
+
+  function setSpriteActionEmpty(message) {
+    stopSpriteAnimation();
+    spriteEls.actionPreview.classList.remove("is-playing");
+    if (spriteEls.actionEmpty) spriteEls.actionEmpty.textContent = message;
+  }
+
+  function syncSpriteRenderMode() {
+    const pixelated = !isSpriteSmoothingEnabled();
+    spriteEls.canvas.classList.toggle("is-pixelated", pixelated);
+    spriteEls.previewPanel?.classList.toggle("is-pixelated", pixelated);
+  }
+
+  function isSpriteSmoothingEnabled() {
+    return spriteEls.smoothInput?.checked ?? true;
+  }
+
+  function clampSpriteFps(value) {
+    return Math.min(30, Math.max(1, Math.round(value || 8)));
   }
 
   function findCanvasBounds(context, width, height) {
