@@ -2217,10 +2217,13 @@ function initSpriteTool() {
     context.save();
     for (let row = 0; row < outputSheet.rows; row += 1) {
       for (let col = 0; col < outputSheet.cols; col += 1) {
-        context.save();
-        context.translate(col * outputSheet.width, row * outputSheet.height);
-        drawSpriteGuides(context, outputSheet.width, outputSheet.height);
-        context.restore();
+        drawSpriteCellGuides(
+          context,
+          col * outputSheet.width,
+          row * outputSheet.height,
+          outputSheet.width,
+          outputSheet.height
+        );
       }
     }
     context.restore();
@@ -2268,17 +2271,36 @@ function initSpriteTool() {
   }
 
   function drawSpriteGuides(context, width, height) {
+    drawSpriteCellGuides(context, 0, 0, width, height);
+  }
+
+  function drawSpriteCellGuides(context, x, y, width, height) {
+    const left = x;
+    const top = y;
+    const right = x + width;
+    const bottom = y + height;
+    const centerX = x + width / 2;
+    const centerY = y + height / 2;
     context.save();
-    context.strokeStyle = "rgba(0, 168, 120, .85)";
-    context.lineWidth = Math.max(1, Math.round(Math.min(width, height) / 64));
-    context.setLineDash([4, 4]);
+    context.lineWidth = 1;
+    context.strokeStyle = "rgba(75, 167, 255, .42)";
+    context.setLineDash([]);
+    context.strokeRect(left + 0.5, top + 0.5, Math.max(0, width - 1), Math.max(0, height - 1));
+
+    context.strokeStyle = "rgba(0, 220, 155, .92)";
+    context.setLineDash([5, 4]);
     context.beginPath();
-    context.moveTo(width / 2, 0);
-    context.lineTo(width / 2, height);
-    context.moveTo(0, height / 2);
-    context.lineTo(width, height / 2);
-    context.moveTo(0, height - 1);
-    context.lineTo(width, height - 1);
+    context.moveTo(centerX, top);
+    context.lineTo(centerX, bottom);
+    context.moveTo(left, centerY);
+    context.lineTo(right, centerY);
+    context.stroke();
+
+    context.strokeStyle = "rgba(255, 202, 78, .95)";
+    context.setLineDash([7, 4]);
+    context.beginPath();
+    context.moveTo(left, bottom - 0.5);
+    context.lineTo(right, bottom - 0.5);
     context.stroke();
     context.restore();
   }
