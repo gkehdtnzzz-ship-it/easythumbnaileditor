@@ -326,6 +326,7 @@ const els = {
   canvasDropZone: document.querySelector("#canvasDropZone"),
   converterExportControls: document.querySelector("#converterExportControls"),
   canvas: document.querySelector("#editorCanvas"),
+  previewPrimary: document.querySelector("#previewPrimary"),
   previewList: document.querySelector("#previewList"),
   previewCount: document.querySelector("#previewCount"),
   previewAssetLabel: document.querySelector("#previewAssetLabel"),
@@ -978,19 +979,31 @@ function updatePreview() {
   const dataUrl = getCleanCanvasDataUrl(getFormat(), getQuality());
   state.previewUrl = dataUrl;
   estimateSize(dataUrl);
+  els.previewPrimary.innerHTML = "";
   els.previewList.innerHTML = "";
   const previews = buildPreviewItems(dataUrl);
-  previews.forEach((item) => els.previewList.append(item));
+  previews.forEach((item, index) => {
+    if (index === 0) {
+      els.previewPrimary.append(item);
+      return;
+    }
+    els.previewList.append(item);
+  });
+  els.previewList.closest(".preview-panel-secondary")?.toggleAttribute("hidden", previews.length <= 1);
   els.previewCount.textContent = `${previews.length} ${t("ready")}`;
 }
 
 function buildPreviewItems(dataUrl) {
   if (state.preset.kind === "idPhoto") return [createIdPhotoPreview(dataUrl)];
-  if (state.preset.kind === "steamStore") return [createSteamStoreHomePreview(dataUrl)];
+  if (state.preset.kind === "steamStore") return [createSteamStoreFocusPreview(dataUrl), createSteamStoreHomePreview(dataUrl)];
   if (state.preset.kind === "youtubeCombined") return [createYoutubeCombinedPreview(dataUrl)];
-  if (state.preset.kind === "playListing") return [createGooglePlayListingPreview(dataUrl)];
+  if (state.preset.kind === "playListing") return [createGooglePlayFocusPreview(dataUrl), createGooglePlayListingPreview(dataUrl)];
   if (state.preset.kind === "profile" || state.preset.kind === "phoneProfile") {
-    return [createProfilePreview(getSlotPreviewUrl("profile", dataUrl, state.preset.width, state.preset.height), state.preset.id)];
+    const profileUrl = getSlotPreviewUrl("profile", dataUrl, state.preset.width, state.preset.height);
+    if (["instagram-profile", "x-profile", "tiktok-profile"].includes(state.preset.id)) {
+      return [createProfilePreview(profileUrl, state.preset.id), createSplitHeaderPreview(dataUrl)];
+    }
+    return [createProfilePreview(profileUrl, state.preset.id)];
   }
   if (state.preset.kind === "phone") return [createPhonePreview(dataUrl)];
   return [createYoutubePreview(dataUrl)];
@@ -1103,9 +1116,9 @@ function createYoutubeCombinedPreview(dataUrl) {
 
 function createProfilePreview(dataUrl, presetId) {
   if (presetId === "youtube") return createYouTubeProfilePreview(dataUrl);
-  if (presetId === "instagram-profile") return createInstagramSplitProfilePreview(dataUrl);
-  if (presetId === "x-profile") return createXSplitProfilePreview(dataUrl);
-  if (presetId === "tiktok-profile") return createTikTokSplitProfilePreview(dataUrl);
+  if (presetId === "instagram-profile") return createInstagramProfilePreview(dataUrl);
+  if (presetId === "x-profile") return createXProfilePreview(dataUrl);
+  if (presetId === "tiktok-profile") return createTikTokProfilePreview(dataUrl);
   if (presetId === "steam-profile") return createSteamProfilePreview(dataUrl);
   if (presetId === "discord-profile") return createDiscordProfilePreview(dataUrl);
   return createGenericProfilePreview(dataUrl);
@@ -1212,6 +1225,12 @@ function createSplitHeaderMarkup(dataUrl) {
       <div class="split-header-grid">${cells}</div>
     </aside>
   `;
+}
+
+function createSplitHeaderPreview(dataUrl) {
+  const mock = div("split-header-preview");
+  mock.innerHTML = createSplitHeaderMarkup(dataUrl);
+  return createCard("3x3 Header Converter", "9 connected tiles", mock);
 }
 
 function createInstagramProfilePreview(dataUrl) {
@@ -1439,6 +1458,18 @@ function createSteamStoreHomePreview(dataUrl) {
   return createCard(t("steamStoreTitle"), `${asset.width} x ${asset.height}`, mock);
 }
 
+function createSteamStoreFocusPreview(dataUrl) {
+  const asset = getCurrentSteamAsset();
+  const mock = div("steam-focus-preview");
+  const slot = div("steam-focus-slot");
+  slot.style.aspectRatio = `${asset.width} / ${asset.height}`;
+  slot.append(image(dataUrl, `${asset.label} preview`));
+  const info = div("steam-focus-info");
+  info.innerHTML = `<strong>${asset.label}</strong><span>${asset.width} x ${asset.height}</span><p>Selected Steam asset placement preview.</p>`;
+  mock.append(slot, info);
+  return createCard(t("steamStoreTitle"), `${asset.width} x ${asset.height}`, mock);
+}
+
 function createDiscordProfilePreview(dataUrl) {
   const mock = div("mock app-profile discord-profile-preview");
   mock.innerHTML = `
@@ -1538,6 +1569,22 @@ function createGooglePlayListingPreview(dataUrl) {
 
   mock.append(header, stats, actions, gallery, about);
   return createCard(t("googlePlayTitle"), t("googlePlayMeta"), mock);
+}
+
+function createGooglePlayFocusPreview(dataUrl) {
+  const iconUrl = getSlotPreviewUrl("profile", dataUrl, 512, 512);
+  const mock = div("google-play-focus");
+  mock.innerHTML = `
+    <div class="play-page-header compact">
+      <div class="play-app-icon"><img src="${iconUrl}" alt="Google Play app icon preview"></div>
+      <div>
+        <h3>${t("googlePlayTitle")}</h3>
+        <p class="developer">${t("googleDeveloper")}</p>
+      </div>
+    </div>
+    <div class="google-focus-hero"><img src="${dataUrl}" alt="Google Play thumbnail preview"></div>
+  `;
+  return createCard(t("googlePlayTitle"), t("googlePlayInfo"), mock);
 }
 
 function div(className) {

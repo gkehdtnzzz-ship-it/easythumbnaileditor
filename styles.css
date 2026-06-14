@@ -201,11 +201,11 @@ body[data-active-tool="sprite"] #downloadButton {
 .workspace {
   display: grid;
   max-width: 100vw;
-  grid-template-columns: minmax(260px, 320px) minmax(360px, 1fr);
+  grid-template-columns: minmax(240px, 300px) minmax(340px, 620px) minmax(270px, 340px);
   grid-template-areas:
-    "preset preset"
-    "tools canvas"
-    "preview preview";
+    "preset preset preset"
+    "tools canvas side-preview"
+    "secondary-preview secondary-preview secondary-preview";
   gap: 14px;
   padding: 14px;
   min-height: calc(100vh - 82px);
@@ -262,8 +262,12 @@ body[data-active-tool="sprite"] #downloadButton {
   grid-area: canvas;
 }
 
-.preview-panel {
-  grid-area: preview;
+.preview-panel-primary {
+  grid-area: side-preview;
+}
+
+.preview-panel-secondary {
+  grid-area: secondary-preview;
 }
 
 .upload-zone,
@@ -1045,8 +1049,8 @@ dd {
 .canvas-shell {
   display: grid;
   place-items: center;
-  min-height: 300px;
-  max-height: min(58vh, 620px);
+  min-height: 260px;
+  max-height: min(48vh, 520px);
   border-radius: 6px;
   background:
     linear-gradient(45deg, color-mix(in srgb, var(--line) 80%, transparent) 25%, transparent 25%),
@@ -1066,9 +1070,9 @@ dd {
 
 #editorCanvas {
   display: block;
-  width: min(100%, 760px);
+  width: min(100%, 560px);
   height: auto;
-  max-height: min(52vh, 560px);
+  max-height: min(44vh, 480px);
   border: 1px solid rgba(15, 36, 48, 0.18);
   background: #fff;
   cursor: default;
@@ -1077,8 +1081,16 @@ dd {
 }
 
 .preview-panel {
-  grid-area: preview;
   overflow: hidden;
+}
+
+.preview-panel-secondary[hidden] {
+  display: none;
+}
+
+.preview-primary {
+  display: grid;
+  gap: 12px;
 }
 
 .preview-header {
@@ -1108,14 +1120,17 @@ dd {
 
 .preview-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 14px;
   overflow: visible;
-  padding-right: 4px;
 }
 
 .preview-card {
-  padding: 18px;
+  padding: 14px;
+}
+
+.preview-panel-primary .preview-card {
+  padding: 12px;
 }
 
 .preview-title {
@@ -1381,6 +1396,10 @@ dd {
   background-color: var(--mock-soft);
 }
 
+.split-header-preview .split-header-tool {
+  box-shadow: none;
+}
+
 .profile-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1618,9 +1637,9 @@ dd {
 
 .stage-steam-assets {
   display: grid;
-  gap: 10px;
-  padding: 12px;
-  margin-bottom: 12px;
+  gap: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);
@@ -1632,8 +1651,8 @@ dd {
 
 .steam-asset-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 7px;
 }
 
 .steam-asset-button {
@@ -1641,10 +1660,10 @@ dd {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  min-height: 42px;
+  min-height: 36px;
   border: 1px solid var(--line);
   border-radius: 7px;
-  padding: 0 12px;
+  padding: 0 10px;
   background: var(--mock-bg);
   color: var(--text);
   cursor: pointer;
@@ -1652,8 +1671,43 @@ dd {
 
 .steam-asset-button span {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 900;
+}
+
+.steam-focus-preview {
+  display: grid;
+  gap: 12px;
+}
+
+.steam-focus-slot {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  max-height: 220px;
+  overflow: hidden;
+  border: 1px solid #31506b;
+  border-radius: 6px;
+  background: #0b141f;
+}
+
+.steam-focus-slot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.steam-focus-info {
+  display: grid;
+  gap: 5px;
+  color: #dbe8f5;
+}
+
+.steam-focus-info span,
+.steam-focus-info p {
+  color: #9fb8cc;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .steam-asset-button.is-active {
@@ -2261,6 +2315,41 @@ dd {
   overflow: hidden;
 }
 
+.google-play-focus {
+  display: grid;
+  gap: 14px;
+}
+
+.play-page-header.compact {
+  align-items: center;
+  gap: 12px;
+}
+
+.play-page-header.compact .play-app-icon {
+  width: 62px;
+  border-radius: 14px;
+}
+
+.play-page-header.compact h3 {
+  margin-bottom: 4px;
+  font-size: 22px;
+  line-height: 1.05;
+}
+
+.google-focus-hero {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--mock-soft);
+  aspect-ratio: 16 / 9;
+}
+
+.google-focus-hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .play-page-header {
   display: flex;
   align-items: flex-start;
@@ -2593,7 +2682,8 @@ dd {
       "preset"
       "tools"
       "canvas"
-      "preview";
+      "side-preview"
+      "secondary-preview";
   }
 
   .sprite-workspace {

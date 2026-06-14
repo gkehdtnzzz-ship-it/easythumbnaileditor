@@ -208,7 +208,7 @@
         </div>
       </section>
 
-      <aside class="preview-panel" aria-label="Live previews">
+      <aside class="preview-panel preview-panel-primary" aria-label="Primary live preview">
         <div class="preview-header">
           <h2 data-i18n="previewTitle">Live Preview</h2>
           <span id="previewCount">0 ready</span>
@@ -217,8 +217,12 @@
           <span id="previewAssetLabel">Editing</span>
           <strong id="previewAssetTitle">YouTube Thumbnail</strong>
         </div>
-        <div class="preview-list" id="previewList"></div>
+        <div class="preview-primary" id="previewPrimary"></div>
       </aside>
+
+      <section class="preview-panel preview-panel-secondary" aria-label="Additional live previews">
+        <div class="preview-list" id="previewList"></div>
+      </section>
     </main>
 
     <main class="sprite-workspace" id="spriteTool" data-tool-panel="sprite" hidden>
