@@ -200,8 +200,9 @@ body[data-active-tool="sprite"] #downloadButton {
 
 .workspace {
   display: grid;
-  max-width: 100vw;
-  grid-template-columns: minmax(240px, 300px) minmax(340px, 620px) minmax(270px, 340px);
+  width: 100%;
+  max-width: none;
+  grid-template-columns: minmax(280px, 330px) minmax(520px, 1fr) minmax(360px, 520px);
   grid-template-areas:
     "preset preset preset"
     "tools canvas side-preview"
@@ -1049,8 +1050,8 @@ dd {
 .canvas-shell {
   display: grid;
   place-items: center;
-  min-height: 260px;
-  max-height: min(48vh, 520px);
+  min-height: 380px;
+  max-height: min(62vh, 700px);
   border-radius: 6px;
   background:
     linear-gradient(45deg, color-mix(in srgb, var(--line) 80%, transparent) 25%, transparent 25%),
@@ -1070,9 +1071,9 @@ dd {
 
 #editorCanvas {
   display: block;
-  width: min(100%, 560px);
+  width: min(100%, 920px);
   height: auto;
-  max-height: min(44vh, 480px);
+  max-height: min(58vh, 660px);
   border: 1px solid rgba(15, 36, 48, 0.18);
   background: #fff;
   cursor: default;
@@ -1120,7 +1121,7 @@ dd {
 
 .preview-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
   gap: 14px;
   overflow: visible;
 }
