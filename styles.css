@@ -52,6 +52,7 @@ body[data-theme="dark"] {
 body {
   margin: 0;
   min-height: 100vh;
+  overflow-x: hidden;
   background: var(--bg);
   color: var(--text);
   font-family: Inter, "Segoe UI", "Noto Sans KR", Arial, sans-serif;
@@ -199,6 +200,7 @@ body[data-active-tool="sprite"] #downloadButton {
 
 .workspace {
   display: grid;
+  max-width: 100vw;
   grid-template-columns: minmax(290px, 340px) minmax(420px, 1fr) minmax(300px, 380px);
   grid-template-areas:
     "preset preset preset"
@@ -906,6 +908,7 @@ input[type="range"] {
 
 .preset-groups {
   display: flex;
+  max-width: 100%;
   gap: 10px;
   margin-top: 12px;
   overflow-x: auto;
@@ -1072,7 +1075,7 @@ dd {
 }
 
 .preview-panel {
-  grid-column: 2;
+  grid-area: preview;
   overflow: hidden;
 }
 
