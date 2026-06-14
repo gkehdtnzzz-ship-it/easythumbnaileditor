@@ -1816,4 +1816,302 @@ function getCanvasPoint(event) {
   };
 }
 
+function initSpriteTool() {
+  const spriteEls = {
+    tabs: [...document.querySelectorAll("[data-product-tab]")],
+    panels: [...document.querySelectorAll("[data-tool-panel]")],
+    fileInput: document.querySelector("#spriteFileInput"),
+    uploadButton: document.querySelector("#spriteUploadButton"),
+    dropZone: document.querySelector("#spriteDropZone"),
+    presetButtons: document.querySelector("#spritePresetButtons"),
+    presetMeta: document.querySelector("#spritePresetMeta"),
+    widthInput: document.querySelector("#spriteWidthInput"),
+    heightInput: document.querySelector("#spriteHeightInput"),
+    paddingInput: document.querySelector("#spritePaddingInput"),
+    scaleInput: document.querySelector("#spriteScaleInput"),
+    trimInput: document.querySelector("#spriteTrimInput"),
+    guideInput: document.querySelector("#spriteGuideInput"),
+    autoButton: document.querySelector("#spriteAutoButton"),
+    sourceInfo: document.querySelector("#spriteSourceInfo"),
+    canvas: document.querySelector("#spriteCanvas"),
+    preview: document.querySelector("#spriteWalkPreview"),
+    previewStatus: document.querySelector("#spritePreviewStatus"),
+    downloadButton: document.querySelector("#spriteDownloadButton")
+  };
+
+  if (!spriteEls.canvas) return;
+
+  const spriteCtx = spriteEls.canvas.getContext("2d");
+  const spritePresets = [
+    { id: "unity-64", label: "Unity 2D", size: "64 x 64", width: 64, height: 64, anchor: "bottom" },
+    { id: "unity-128", label: "Unity HD", size: "128 x 128", width: 128, height: 128, anchor: "bottom" },
+    { id: "unreal-128", label: "Unreal Paper2D", size: "128 x 128", width: 128, height: 128, anchor: "bottom" },
+    { id: "godot-32", label: "Godot Pixel", size: "32 x 32", width: 32, height: 32, anchor: "bottom" },
+    { id: "godot-64", label: "Godot Character", size: "64 x 64", width: 64, height: 64, anchor: "bottom" },
+    { id: "rpg-maker-mv", label: "RPG Maker MV/MZ", size: "48 x 48", width: 48, height: 48, anchor: "bottom" },
+    { id: "rpg-maker-xp", label: "RPG Maker XP", size: "32 x 48", width: 32, height: 48, anchor: "bottom" },
+    { id: "nekoland-96", label: "Nekoland", size: "96 x 96", width: 96, height: 96, anchor: "bottom" },
+    { id: "custom", label: "Custom", size: "Direct input", width: 64, height: 64, anchor: "center" }
+  ];
+
+  const spriteState = {
+    preset: spritePresets[0],
+    image: null,
+    imageName: "sprite",
+    bbox: null,
+    renderDataUrl: ""
+  };
+
+  spriteEls.tabs.forEach((button) => {
+    button.addEventListener("click", () => {
+      const target = button.dataset.productTab;
+      document.body.dataset.activeTool = target;
+      spriteEls.tabs.forEach((tab) => tab.classList.toggle("is-active", tab === button));
+      spriteEls.panels.forEach((panel) => {
+        panel.hidden = panel.dataset.toolPanel !== target;
+      });
+    });
+  });
+  document.body.dataset.activeTool = "thumbnail";
+
+  spriteEls.uploadButton.addEventListener("click", () => spriteEls.fileInput.click());
+  spriteEls.fileInput.addEventListener("change", (event) => {
+    const [file] = event.target.files || [];
+    if (file) loadSpriteFile(file);
+    event.target.value = "";
+  });
+  ["dragenter", "dragover"].forEach((type) => {
+    spriteEls.dropZone.addEventListener(type, (event) => {
+      event.preventDefault();
+      spriteEls.dropZone.classList.add("dragging");
+    });
+  });
+  ["dragleave", "drop"].forEach((type) => {
+    spriteEls.dropZone.addEventListener(type, () => spriteEls.dropZone.classList.remove("dragging"));
+  });
+  spriteEls.dropZone.addEventListener("drop", (event) => {
+    event.preventDefault();
+    const [file] = event.dataTransfer?.files || [];
+    if (file) loadSpriteFile(file);
+  });
+
+  spriteEls.presetButtons.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-sprite-preset]");
+    if (!button) return;
+    const preset = spritePresets.find((item) => item.id === button.dataset.spritePreset);
+    if (!preset) return;
+    spriteState.preset = preset;
+    spriteEls.widthInput.value = preset.width;
+    spriteEls.heightInput.value = preset.height;
+    const anchor = document.querySelector(`input[name="spriteAnchor"][value="${preset.anchor}"]`);
+    if (anchor) anchor.checked = true;
+    renderSpritePresetButtons();
+    renderSprite();
+  });
+
+  [spriteEls.widthInput, spriteEls.heightInput, spriteEls.paddingInput, spriteEls.scaleInput].forEach((input) => {
+    input.addEventListener("input", () => {
+      spriteState.preset = spritePresets.find((item) => item.id === "custom");
+      renderSpritePresetButtons();
+      renderSprite();
+    });
+  });
+  [...document.querySelectorAll("input[name='spriteAnchor'], input[name='spriteFit']"), spriteEls.trimInput, spriteEls.guideInput].forEach((input) => {
+    input.addEventListener("change", renderSprite);
+  });
+  spriteEls.autoButton.addEventListener("click", () => {
+    spriteEls.paddingInput.value = 4;
+    spriteEls.scaleInput.value = 100;
+    renderSprite();
+  });
+  spriteEls.downloadButton.addEventListener("click", () => {
+    if (!spriteState.renderDataUrl) return;
+    const link = document.createElement("a");
+    link.href = spriteState.renderDataUrl;
+    link.download = `${spriteState.imageName}-${getSpriteWidth()}x${getSpriteHeight()}-centered.png`;
+    link.click();
+  });
+
+  renderSpritePresetButtons();
+  renderSprite();
+
+  function renderSpritePresetButtons() {
+    spriteEls.presetButtons.innerHTML = "";
+    spritePresets.forEach((preset) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "sprite-preset-button";
+      button.dataset.spritePreset = preset.id;
+      button.classList.toggle("is-active", preset.id === spriteState.preset.id);
+      button.innerHTML = `${preset.label}<span>${preset.size}</span>`;
+      spriteEls.presetButtons.append(button);
+    });
+    spriteEls.presetMeta.textContent = `${getSpriteWidth()} x ${getSpriteHeight()}`;
+  }
+
+  function loadSpriteFile(file) {
+    const image = new Image();
+    image.onload = () => {
+      spriteState.image = image;
+      spriteState.imageName = file.name.replace(/\.[^.]+$/, "") || "sprite";
+      spriteState.bbox = findSpriteBounds(image);
+      spriteEls.sourceInfo.textContent = `${image.naturalWidth} x ${image.naturalHeight}`;
+      renderSprite();
+    };
+    image.src = URL.createObjectURL(file);
+  }
+
+  function renderSprite() {
+    const width = getSpriteWidth();
+    const height = getSpriteHeight();
+    spriteEls.canvas.width = width;
+    spriteEls.canvas.height = height;
+    spriteEls.presetMeta.textContent = `${width} x ${height}`;
+    spriteCtx.clearRect(0, 0, width, height);
+    drawSpriteChecker(spriteCtx, width, height);
+
+    if (!spriteState.image) {
+      drawSpriteGuides(spriteCtx, width, height);
+      spriteCtx.fillStyle = getComputedStyle(document.body).getPropertyValue("--muted").trim() || "#8a97a3";
+      spriteCtx.font = `${Math.max(10, Math.floor(width / 8))}px sans-serif`;
+      spriteCtx.textAlign = "center";
+      spriteCtx.fillText("Upload", width / 2, height / 2);
+      spriteEls.preview.innerHTML = "";
+      spriteEls.previewStatus.textContent = "waiting";
+      spriteState.renderDataUrl = "";
+      return;
+    }
+
+    const draw = getSpriteDrawRect(width, height);
+    spriteCtx.imageSmoothingEnabled = false;
+    spriteCtx.drawImage(
+      spriteState.image,
+      draw.sx,
+      draw.sy,
+      draw.sw,
+      draw.sh,
+      draw.dx,
+      draw.dy,
+      draw.dw,
+      draw.dh
+    );
+    if (spriteEls.guideInput.checked) drawSpriteGuides(spriteCtx, width, height);
+    spriteState.renderDataUrl = spriteEls.canvas.toDataURL("image/png");
+    renderSpriteWalkPreview();
+    spriteEls.previewStatus.textContent = `${width} x ${height} ready`;
+  }
+
+  function getSpriteDrawRect(width, height) {
+    const padding = Math.max(0, Number(spriteEls.paddingInput.value) || 0);
+    const manualScale = Math.max(1, Number(spriteEls.scaleInput.value) || 100) / 100;
+    const fit = document.querySelector("input[name='spriteFit']:checked")?.value || "contain";
+    const anchor = document.querySelector("input[name='spriteAnchor']:checked")?.value || "center";
+    const source = spriteState.image;
+    const bounds = spriteEls.trimInput.checked && spriteState.bbox ? spriteState.bbox : {
+      x: 0,
+      y: 0,
+      width: source.naturalWidth,
+      height: source.naturalHeight
+    };
+    const usableWidth = Math.max(1, width - padding * 2);
+    const usableHeight = Math.max(1, height - padding * 2);
+    const scale = (fit === "cover"
+      ? Math.max(usableWidth / bounds.width, usableHeight / bounds.height)
+      : Math.min(usableWidth / bounds.width, usableHeight / bounds.height)) * manualScale;
+    const dw = Math.max(1, Math.round(bounds.width * scale));
+    const dh = Math.max(1, Math.round(bounds.height * scale));
+    const dx = Math.round((width - dw) / 2);
+    const dy = anchor === "bottom" ? Math.round(height - padding - dh) : Math.round((height - dh) / 2);
+    return {
+      sx: bounds.x,
+      sy: bounds.y,
+      sw: bounds.width,
+      sh: bounds.height,
+      dx,
+      dy,
+      dw,
+      dh
+    };
+  }
+
+  function findSpriteBounds(image) {
+    const probe = document.createElement("canvas");
+    probe.width = image.naturalWidth;
+    probe.height = image.naturalHeight;
+    const probeCtx = probe.getContext("2d");
+    probeCtx.drawImage(image, 0, 0);
+    const pixels = probeCtx.getImageData(0, 0, probe.width, probe.height).data;
+    let minX = probe.width;
+    let minY = probe.height;
+    let maxX = -1;
+    let maxY = -1;
+    for (let y = 0; y < probe.height; y += 1) {
+      for (let x = 0; x < probe.width; x += 1) {
+        const alpha = pixels[(y * probe.width + x) * 4 + 3];
+        if (alpha > 10) {
+          minX = Math.min(minX, x);
+          minY = Math.min(minY, y);
+          maxX = Math.max(maxX, x);
+          maxY = Math.max(maxY, y);
+        }
+      }
+    }
+    if (maxX < 0) return { x: 0, y: 0, width: image.naturalWidth, height: image.naturalHeight };
+    return {
+      x: minX,
+      y: minY,
+      width: maxX - minX + 1,
+      height: maxY - minY + 1
+    };
+  }
+
+  function drawSpriteChecker(context, width, height) {
+    const tile = Math.max(4, Math.floor(Math.min(width, height) / 8));
+    for (let y = 0; y < height; y += tile) {
+      for (let x = 0; x < width; x += tile) {
+        context.fillStyle = ((x / tile + y / tile) % 2) ? "rgba(120,140,160,.18)" : "rgba(120,140,160,.08)";
+        context.fillRect(x, y, tile, tile);
+      }
+    }
+  }
+
+  function drawSpriteGuides(context, width, height) {
+    context.save();
+    context.strokeStyle = "rgba(0, 168, 120, .85)";
+    context.lineWidth = Math.max(1, Math.round(Math.min(width, height) / 64));
+    context.setLineDash([4, 4]);
+    context.beginPath();
+    context.moveTo(width / 2, 0);
+    context.lineTo(width / 2, height);
+    context.moveTo(0, height / 2);
+    context.lineTo(width, height / 2);
+    context.moveTo(0, height - 1);
+    context.lineTo(width, height - 1);
+    context.stroke();
+    context.restore();
+  }
+
+  function renderSpriteWalkPreview() {
+    spriteEls.preview.innerHTML = "";
+    for (let i = 0; i < 5; i += 1) {
+      const step = document.createElement("div");
+      step.className = "sprite-step";
+      const img = document.createElement("img");
+      img.alt = `Sprite movement frame ${i + 1}`;
+      img.src = spriteState.renderDataUrl;
+      step.append(img);
+      spriteEls.preview.append(step);
+    }
+  }
+
+  function getSpriteWidth() {
+    return Math.max(1, Number(spriteEls.widthInput.value) || spriteState.preset.width);
+  }
+
+  function getSpriteHeight() {
+    return Math.max(1, Number(spriteEls.heightInput.value) || spriteState.preset.height);
+  }
+}
+
 init();
+initSpriteTool();

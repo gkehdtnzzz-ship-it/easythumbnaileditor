@@ -68,7 +68,12 @@
       </div>
     </header>
 
-    <main class="workspace">
+    <nav class="product-tabs" aria-label="Tool mode">
+      <button class="product-tab is-active" type="button" data-product-tab="thumbnail">ThumbFit Editor</button>
+      <button class="product-tab" type="button" data-product-tab="sprite">SpriteFit Resources</button>
+    </nav>
+
+    <main class="workspace" id="thumbnailTool" data-tool-panel="thumbnail">
       <section class="tool-panel" aria-label="Editor controls">
         <div class="upload-zone" id="dropZone">
           <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
@@ -214,7 +219,81 @@
       </aside>
     </main>
 
-    <section class="seo-content" aria-label="Supported image tools">
+    <main class="sprite-workspace" id="spriteTool" data-tool-panel="sprite" hidden>
+      <section class="sprite-panel">
+        <div class="upload-zone sprite-upload-zone" id="spriteDropZone">
+          <input id="spriteFileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+          <button class="upload-button" id="spriteUploadButton" type="button">Upload Sprite Image</button>
+          <p>PNG, JPG, WEBP 이미지를 넣으면 투명 여백을 감지하고 목표 규격의 중앙으로 자동 정렬합니다.</p>
+        </div>
+
+        <div class="control-group">
+          <div class="group-title">
+            <h2>Engine / Tool Preset</h2>
+            <span id="spritePresetMeta">64 x 64</span>
+          </div>
+          <div class="sprite-preset-grid" id="spritePresetButtons" aria-label="Sprite size presets"></div>
+        </div>
+
+        <div class="control-group">
+          <div class="group-title">
+            <h2>Output Cell</h2>
+            <button class="text-button" id="spriteAutoButton" type="button">Auto center</button>
+          </div>
+          <div class="grid-controls">
+            <label>Width <input id="spriteWidthInput" type="number" min="1" step="1" value="64"></label>
+            <label>Height <input id="spriteHeightInput" type="number" min="1" step="1" value="64"></label>
+            <label>Padding <input id="spritePaddingInput" type="number" min="0" step="1" value="4"></label>
+            <label>Scale % <input id="spriteScaleInput" type="number" min="1" step="1" value="100"></label>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <div class="group-title">
+            <h2>Alignment</h2>
+            <span id="spriteSourceInfo">No image</span>
+          </div>
+          <div class="segmented sprite-options">
+            <label><input type="radio" name="spriteAnchor" value="center" checked> Center</label>
+            <label><input type="radio" name="spriteAnchor" value="bottom"> Feet / Bottom</label>
+          </div>
+          <div class="segmented sprite-options">
+            <label><input type="radio" name="spriteFit" value="contain" checked> Full visible</label>
+            <label><input type="radio" name="spriteFit" value="cover"> Fill cell</label>
+          </div>
+          <label class="check-row"><input id="spriteTrimInput" type="checkbox" checked> Auto trim transparent border</label>
+          <label class="check-row"><input id="spriteGuideInput" type="checkbox" checked> Show center and foot guide</label>
+        </div>
+
+        <button class="primary-button sprite-download-button" id="spriteDownloadButton" type="button">Download Sprite PNG</button>
+      </section>
+
+      <section class="sprite-stage">
+        <div class="stage-toolbar">
+          <div class="stage-title-group">
+            <strong>SpriteFit Auto Center</strong>
+            <span>엔진별 셀 크기에 맞춰 캐릭터 중심과 발 위치를 안정화합니다.</span>
+          </div>
+        </div>
+        <div class="sprite-canvas-wrap">
+          <canvas id="spriteCanvas" width="64" height="64"></canvas>
+        </div>
+      </section>
+
+      <aside class="sprite-preview-panel">
+        <div class="preview-header">
+          <h2>Movement Preview</h2>
+          <span id="spritePreviewStatus">waiting</span>
+        </div>
+        <div class="sprite-walk-preview" id="spriteWalkPreview"></div>
+        <div class="sprite-info-card">
+          <strong>What this fixes</strong>
+          <p>서로 다른 크기의 리소스를 가져올 때 캐릭터가 한쪽으로 쏠리거나 이동 중 흔들리는 문제를 줄입니다. 투명 영역을 기준으로 실제 캐릭터 영역을 찾고, 목표 셀의 중앙 또는 발 기준 위치로 다시 배치합니다.</p>
+        </div>
+      </aside>
+    </main>
+
+    <section class="seo-content" data-tool-panel="thumbnail" aria-label="Supported image tools">
       <div>
         <p class="eyebrow">Free Image Converter</p>
         <h2>무료 썸네일 편집기와 이미지 확장자 변경 도구</h2>
