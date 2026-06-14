@@ -247,6 +247,8 @@
             <label>Height <input id="spriteHeightInput" type="number" min="1" step="1" value="64"></label>
             <label>Padding <input id="spritePaddingInput" type="number" min="0" step="1" value="4"></label>
             <label>Scale % <input id="spriteScaleInput" type="number" min="1" step="1" value="100"></label>
+            <label>Preview Row <input id="spriteRowInput" type="number" min="1" step="1" value="1"></label>
+            <label>Canvas Zoom <input id="spriteZoomInput" type="number" min="25" max="800" step="25" value="100"></label>
           </div>
         </div>
 
@@ -274,7 +276,7 @@
         <div class="stage-toolbar">
           <div class="stage-title-group">
             <strong>SpriteFit Auto Center</strong>
-            <span>엔진별 셀 크기에 맞춰 캐릭터 중심과 발 위치를 안정화합니다.</span>
+            <span id="spriteCanvasInfo">Cell 64 x 64 · Zoom 100%</span>
           </div>
         </div>
         <div class="sprite-canvas-wrap">
@@ -284,8 +286,11 @@
 
       <aside class="sprite-preview-panel">
         <div class="preview-header">
-          <h2>Movement Preview</h2>
+          <h2>Action Row Preview</h2>
           <span id="spritePreviewStatus">waiting</span>
+        </div>
+        <div class="sprite-action-preview" id="spriteActionPreview">
+          <span>Upload a sprite sheet to preview one action row.</span>
         </div>
         <div class="sprite-walk-preview" id="spriteWalkPreview"></div>
         <div class="sprite-info-card">

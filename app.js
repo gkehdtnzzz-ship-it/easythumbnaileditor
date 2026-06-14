@@ -1829,12 +1829,18 @@ function initSpriteTool() {
     heightInput: document.querySelector("#spriteHeightInput"),
     paddingInput: document.querySelector("#spritePaddingInput"),
     scaleInput: document.querySelector("#spriteScaleInput"),
+    rowInput: document.querySelector("#spriteRowInput"),
+    zoomInput: document.querySelector("#spriteZoomInput"),
     trimInput: document.querySelector("#spriteTrimInput"),
     guideInput: document.querySelector("#spriteGuideInput"),
     autoButton: document.querySelector("#spriteAutoButton"),
     sourceInfo: document.querySelector("#spriteSourceInfo"),
+    canvasInfo: document.querySelector("#spriteCanvasInfo"),
     canvas: document.querySelector("#spriteCanvas"),
+    canvasWrap: document.querySelector(".sprite-canvas-wrap"),
+    tool: document.querySelector("#spriteTool"),
     preview: document.querySelector("#spriteWalkPreview"),
+    actionPreview: document.querySelector("#spriteActionPreview"),
     previewStatus: document.querySelector("#spritePreviewStatus"),
     downloadButton: document.querySelector("#spriteDownloadButton")
   };
@@ -1859,7 +1865,8 @@ function initSpriteTool() {
     image: null,
     imageName: "sprite",
     bbox: null,
-    renderDataUrl: ""
+    renderDataUrl: "",
+    zoom: 1
   };
 
   spriteEls.tabs.forEach((button) => {
@@ -1880,19 +1887,21 @@ function initSpriteTool() {
     if (file) loadSpriteFile(file);
     event.target.value = "";
   });
-  ["dragenter", "dragover"].forEach((type) => {
-    spriteEls.dropZone.addEventListener(type, (event) => {
+  [spriteEls.dropZone, spriteEls.canvasWrap, spriteEls.tool].filter(Boolean).forEach((target) => {
+    ["dragenter", "dragover"].forEach((type) => target.addEventListener(type, (event) => {
       event.preventDefault();
       spriteEls.dropZone.classList.add("dragging");
+      spriteEls.canvasWrap?.classList.add("dragging");
+    }));
+    ["dragleave", "drop"].forEach((type) => target.addEventListener(type, () => {
+      spriteEls.dropZone.classList.remove("dragging");
+      spriteEls.canvasWrap?.classList.remove("dragging");
+    }));
+    target.addEventListener("drop", (event) => {
+      event.preventDefault();
+      const [file] = event.dataTransfer?.files || [];
+      if (file) loadSpriteFile(file);
     });
-  });
-  ["dragleave", "drop"].forEach((type) => {
-    spriteEls.dropZone.addEventListener(type, () => spriteEls.dropZone.classList.remove("dragging"));
-  });
-  spriteEls.dropZone.addEventListener("drop", (event) => {
-    event.preventDefault();
-    const [file] = event.dataTransfer?.files || [];
-    if (file) loadSpriteFile(file);
   });
 
   spriteEls.presetButtons.addEventListener("click", (event) => {
@@ -1916,6 +1925,19 @@ function initSpriteTool() {
       renderSprite();
     });
   });
+  spriteEls.rowInput.addEventListener("input", renderSprite);
+  spriteEls.zoomInput.addEventListener("input", () => {
+    spriteState.zoom = clampSpriteZoom(Number(spriteEls.zoomInput.value) / 100 || 1);
+    applySpriteCanvasZoom();
+  });
+  spriteEls.canvasWrap.addEventListener("wheel", (event) => {
+    event.preventDefault();
+    const direction = event.deltaY > 0 ? -1 : 1;
+    const factor = direction > 0 ? 1.12 : 0.88;
+    spriteState.zoom = clampSpriteZoom(spriteState.zoom * factor);
+    spriteEls.zoomInput.value = String(Math.round(spriteState.zoom * 100));
+    applySpriteCanvasZoom();
+  }, { passive: false });
   [...document.querySelectorAll("input[name='spriteAnchor'], input[name='spriteFit']"), spriteEls.trimInput, spriteEls.guideInput].forEach((input) => {
     input.addEventListener("change", renderSprite);
   });
@@ -1956,6 +1978,8 @@ function initSpriteTool() {
       spriteState.imageName = file.name.replace(/\.[^.]+$/, "") || "sprite";
       spriteState.bbox = findSpriteBounds(image);
       spriteEls.sourceInfo.textContent = `${image.naturalWidth} x ${image.naturalHeight}`;
+      syncSpriteRows();
+      resetSpriteZoomForImage();
       renderSprite();
     };
     image.src = URL.createObjectURL(file);
@@ -1967,6 +1991,7 @@ function initSpriteTool() {
     spriteEls.canvas.width = width;
     spriteEls.canvas.height = height;
     spriteEls.presetMeta.textContent = `${width} x ${height}`;
+    syncSpriteRows();
     spriteCtx.clearRect(0, 0, width, height);
     drawSpriteChecker(spriteCtx, width, height);
 
@@ -1977,8 +2002,11 @@ function initSpriteTool() {
       spriteCtx.textAlign = "center";
       spriteCtx.fillText("Upload", width / 2, height / 2);
       spriteEls.preview.innerHTML = "";
+      spriteEls.actionPreview.innerHTML = "<span>Upload a sprite sheet to preview one action row.</span>";
       spriteEls.previewStatus.textContent = "waiting";
       spriteState.renderDataUrl = "";
+      updateSpriteCanvasInfo(width, height);
+      applySpriteCanvasZoom();
       return;
     }
 
@@ -1998,7 +2026,10 @@ function initSpriteTool() {
     if (spriteEls.guideInput.checked) drawSpriteGuides(spriteCtx, width, height);
     spriteState.renderDataUrl = spriteEls.canvas.toDataURL("image/png");
     renderSpriteWalkPreview();
-    spriteEls.previewStatus.textContent = `${width} x ${height} ready`;
+    renderSpriteActionPreview();
+    updateSpriteCanvasInfo(width, height);
+    applySpriteCanvasZoom();
+    spriteEls.previewStatus.textContent = `row ${getSpriteRow()} / ${getSpriteRowCount()} · ${width} x ${height}`;
   }
 
   function getSpriteDrawRect(width, height) {
@@ -2093,15 +2124,150 @@ function initSpriteTool() {
 
   function renderSpriteWalkPreview() {
     spriteEls.preview.innerHTML = "";
-    for (let i = 0; i < 5; i += 1) {
+    const frames = getSelectedSpriteRowFrames();
+    const previewFrames = frames.length ? frames.slice(0, 8) : [spriteState.renderDataUrl];
+    previewFrames.forEach((src, index) => {
       const step = document.createElement("div");
       step.className = "sprite-step";
       const img = document.createElement("img");
-      img.alt = `Sprite movement frame ${i + 1}`;
-      img.src = spriteState.renderDataUrl;
+      img.alt = `Sprite movement frame ${index + 1}`;
+      img.src = src;
       step.append(img);
       spriteEls.preview.append(step);
+    });
+  }
+
+  function renderSpriteActionPreview() {
+    const frames = getSelectedSpriteRowFrames();
+    spriteEls.actionPreview.innerHTML = "";
+    if (!frames.length) {
+      spriteEls.actionPreview.innerHTML = "<span>No row frames detected for this cell size.</span>";
+      return;
     }
+    const strip = document.createElement("div");
+    strip.className = "sprite-action-strip";
+    frames.forEach((src, index) => {
+      const img = document.createElement("img");
+      img.alt = `Selected action frame ${index + 1}`;
+      img.src = src;
+      strip.append(img);
+    });
+    spriteEls.actionPreview.append(strip);
+  }
+
+  function getSelectedSpriteRowFrames() {
+    if (!spriteState.image) return [];
+    const source = spriteState.image;
+    const cellWidth = getSpriteWidth();
+    const cellHeight = getSpriteHeight();
+    const cols = Math.max(1, Math.floor(source.naturalWidth / cellWidth));
+    const rows = Math.max(1, Math.floor(source.naturalHeight / cellHeight));
+    const row = Math.min(rows, getSpriteRow()) - 1;
+    const frames = [];
+    for (let col = 0; col < cols; col += 1) {
+      frames.push(renderSpriteFrameDataUrl(source, col * cellWidth, row * cellHeight, cellWidth, cellHeight));
+    }
+    return frames;
+  }
+
+  function renderSpriteFrameDataUrl(source, sx, sy, cellWidth, cellHeight) {
+    const frameCanvas = document.createElement("canvas");
+    frameCanvas.width = cellWidth;
+    frameCanvas.height = cellHeight;
+    const frameCtx = frameCanvas.getContext("2d");
+    frameCtx.imageSmoothingEnabled = false;
+    frameCtx.drawImage(source, sx, sy, cellWidth, cellHeight, 0, 0, cellWidth, cellHeight);
+
+    const bounds = spriteEls.trimInput.checked
+      ? findCanvasBounds(frameCtx, cellWidth, cellHeight)
+      : { x: 0, y: 0, width: cellWidth, height: cellHeight };
+    const output = document.createElement("canvas");
+    output.width = cellWidth;
+    output.height = cellHeight;
+    const outputCtx = output.getContext("2d");
+    drawSpriteChecker(outputCtx, cellWidth, cellHeight);
+    if (bounds.width > 0 && bounds.height > 0) {
+      const padding = Math.max(0, Number(spriteEls.paddingInput.value) || 0);
+      const manualScale = Math.max(1, Number(spriteEls.scaleInput.value) || 100) / 100;
+      const fit = document.querySelector("input[name='spriteFit']:checked")?.value || "contain";
+      const anchor = document.querySelector("input[name='spriteAnchor']:checked")?.value || "center";
+      const usableWidth = Math.max(1, cellWidth - padding * 2);
+      const usableHeight = Math.max(1, cellHeight - padding * 2);
+      const scale = (fit === "cover"
+        ? Math.max(usableWidth / bounds.width, usableHeight / bounds.height)
+        : Math.min(usableWidth / bounds.width, usableHeight / bounds.height)) * manualScale;
+      const dw = Math.max(1, Math.round(bounds.width * scale));
+      const dh = Math.max(1, Math.round(bounds.height * scale));
+      const dx = Math.round((cellWidth - dw) / 2);
+      const dy = anchor === "bottom" ? Math.round(cellHeight - padding - dh) : Math.round((cellHeight - dh) / 2);
+      outputCtx.imageSmoothingEnabled = false;
+      outputCtx.drawImage(frameCanvas, bounds.x, bounds.y, bounds.width, bounds.height, dx, dy, dw, dh);
+    }
+    if (spriteEls.guideInput.checked) drawSpriteGuides(outputCtx, cellWidth, cellHeight);
+    return output.toDataURL("image/png");
+  }
+
+  function findCanvasBounds(context, width, height) {
+    const pixels = context.getImageData(0, 0, width, height).data;
+    let minX = width;
+    let minY = height;
+    let maxX = -1;
+    let maxY = -1;
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const alpha = pixels[(y * width + x) * 4 + 3];
+        if (alpha > 10) {
+          minX = Math.min(minX, x);
+          minY = Math.min(minY, y);
+          maxX = Math.max(maxX, x);
+          maxY = Math.max(maxY, y);
+        }
+      }
+    }
+    if (maxX < 0) return { x: 0, y: 0, width: 0, height: 0 };
+    return { x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 };
+  }
+
+  function syncSpriteRows() {
+    if (!spriteState.image) return;
+    const rows = getSpriteRowCount();
+    spriteEls.rowInput.max = String(rows);
+    if (getSpriteRow() > rows) spriteEls.rowInput.value = String(rows);
+  }
+
+  function getSpriteRow() {
+    return Math.max(1, Number(spriteEls.rowInput.value) || 1);
+  }
+
+  function getSpriteRowCount() {
+    if (!spriteState.image) return 1;
+    return Math.max(1, Math.floor(spriteState.image.naturalHeight / getSpriteHeight()));
+  }
+
+  function resetSpriteZoomForImage() {
+    const width = getSpriteWidth();
+    const height = getSpriteHeight();
+    const maxWidth = 720;
+    const maxHeight = 520;
+    spriteState.zoom = clampSpriteZoom(Math.min(maxWidth / width, maxHeight / height, 6));
+    spriteEls.zoomInput.value = String(Math.round(spriteState.zoom * 100));
+  }
+
+  function applySpriteCanvasZoom() {
+    const width = getSpriteWidth();
+    const height = getSpriteHeight();
+    spriteEls.canvas.style.width = `${Math.max(1, Math.round(width * spriteState.zoom))}px`;
+    spriteEls.canvas.style.height = `${Math.max(1, Math.round(height * spriteState.zoom))}px`;
+    updateSpriteCanvasInfo(width, height);
+  }
+
+  function updateSpriteCanvasInfo(width, height) {
+    const sourceText = spriteState.image ? `Source ${spriteState.image.naturalWidth} x ${spriteState.image.naturalHeight}` : "No source";
+    spriteEls.canvasInfo.textContent = `${sourceText} · Cell ${width} x ${height} · Zoom ${Math.round(spriteState.zoom * 100)}%`;
+  }
+
+  function clampSpriteZoom(value) {
+    return Math.min(8, Math.max(0.25, value));
   }
 
   function getSpriteWidth() {
