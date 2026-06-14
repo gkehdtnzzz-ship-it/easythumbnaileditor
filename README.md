@@ -30,7 +30,7 @@ Included files:
 
 Before submitting to Google AdSense or Search Console:
 
-1. The default public URL is set to `https://easythumbnaileditor.pages.dev/`. Replace it later if you connect a custom domain.
+1. The default public URL is set to `https://ezeditor.org/`. Replace it later if you connect a custom domain.
 2. Add your AdSense publisher code only after your AdSense account provides it.
 3. If AdSense requires `ads.txt`, create it with the exact seller line provided by AdSense.
 4. Submit `https://your-domain.com/sitemap.xml` in Google Search Console.
@@ -44,7 +44,7 @@ Before submitting to Google AdSense or Search Console:
 4. Set `Source` to `Deploy from a branch`.
 5. Select the `main` branch and `/root`, then save.
 6. Wait for GitHub Pages to publish the site.
-7. Replace `https://easythumbnaileditor.pages.dev/` in `index.html`, `robots.txt`, and `sitemap.xml` if you connect a custom domain.
+7. Replace `https://ezeditor.org/` in `index.html`, `robots.txt`, and `sitemap.xml` if you connect a custom domain.
 8. If using a custom domain, add a `CNAME` file containing only that domain, then configure DNS in your domain provider.
 
 ## Local Git Commands
