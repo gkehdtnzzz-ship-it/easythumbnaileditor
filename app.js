@@ -1846,6 +1846,7 @@ function initSpriteTool() {
     centerGuideInput: document.querySelector("#spriteCenterGuideInput"),
     footGuideInput: document.querySelector("#spriteFootGuideInput"),
     smoothInput: document.querySelector("#spriteSmoothInput"),
+    uniformScaleInput: document.querySelector("#spriteUniformScaleInput"),
     autoButton: document.querySelector("#spriteAutoButton"),
     sourceInfo: document.querySelector("#spriteSourceInfo"),
     canvasInfo: document.querySelector("#spriteCanvasInfo"),
@@ -1982,6 +1983,7 @@ function initSpriteTool() {
     spriteEls.cellGuideInput,
     spriteEls.centerGuideInput,
     spriteEls.footGuideInput,
+    spriteEls.uniformScaleInput,
     spriteEls.smoothInput
   ].filter(Boolean).forEach((input) => {
     input.addEventListener("change", renderSprite);
@@ -2221,6 +2223,7 @@ function initSpriteTool() {
     output.height = rows * outputHeight;
     const outputCtx = output.getContext("2d");
     outputCtx.clearRect(0, 0, output.width, output.height);
+    const uniformBounds = getSpriteUniformBounds(source, sourceWidth, sourceHeight, cols, rows);
 
     const frameUrls = [];
     const frameMeta = [];
@@ -2235,7 +2238,8 @@ function initSpriteTool() {
           sourceWidth,
           sourceHeight,
           outputWidth,
-          outputHeight
+          outputHeight,
+          uniformBounds
         );
         outputCtx.drawImage(frame.canvas, col * outputWidth, row * outputHeight);
         rowFrames.push(frame.canvas.toDataURL("image/png"));
@@ -2245,10 +2249,36 @@ function initSpriteTool() {
       frameMeta.push(rowMeta);
     }
 
-    return { canvas: output, cols, rows, frameUrls, frameMeta, sourceWidth, sourceHeight, width: outputWidth, height: outputHeight };
+    return { canvas: output, cols, rows, frameUrls, frameMeta, sourceWidth, sourceHeight, uniformBounds, width: outputWidth, height: outputHeight };
   }
 
-  function renderSpriteFrameCanvas(source, sx, sy, sourceWidth, sourceHeight, outputWidth, outputHeight) {
+  function getSpriteUniformBounds(source, sourceWidth, sourceHeight, cols, rows) {
+    if (!isSpriteUniformScaleEnabled() || !spriteEls.trimInput.checked) {
+      return { x: 0, y: 0, width: sourceWidth, height: sourceHeight };
+    }
+    let maxWidth = 0;
+    let maxHeight = 0;
+    for (let row = 0; row < rows; row += 1) {
+      for (let col = 0; col < cols; col += 1) {
+        const probe = document.createElement("canvas");
+        probe.width = sourceWidth;
+        probe.height = sourceHeight;
+        const probeCtx = probe.getContext("2d");
+        probeCtx.drawImage(source, col * sourceWidth, row * sourceHeight, sourceWidth, sourceHeight, 0, 0, sourceWidth, sourceHeight);
+        const bounds = findCanvasBounds(probeCtx, sourceWidth, sourceHeight);
+        maxWidth = Math.max(maxWidth, bounds.width);
+        maxHeight = Math.max(maxHeight, bounds.height);
+      }
+    }
+    return {
+      x: 0,
+      y: 0,
+      width: maxWidth || sourceWidth,
+      height: maxHeight || sourceHeight
+    };
+  }
+
+  function renderSpriteFrameCanvas(source, sx, sy, sourceWidth, sourceHeight, outputWidth, outputHeight, uniformBounds) {
     const frameCanvas = document.createElement("canvas");
     frameCanvas.width = sourceWidth;
     frameCanvas.height = sourceHeight;
@@ -2260,6 +2290,9 @@ function initSpriteTool() {
     const bounds = spriteEls.trimInput.checked
       ? findCanvasBounds(frameCtx, sourceWidth, sourceHeight)
       : { x: 0, y: 0, width: sourceWidth, height: sourceHeight };
+    const scaleBounds = isSpriteUniformScaleEnabled() && uniformBounds?.width && uniformBounds?.height
+      ? uniformBounds
+      : bounds;
     const output = document.createElement("canvas");
     output.width = outputWidth;
     output.height = outputHeight;
@@ -2271,6 +2304,7 @@ function initSpriteTool() {
       outputWidth,
       outputHeight,
       bounds,
+      scaleBounds,
       dx: 0,
       dy: 0,
       dw: 0,
@@ -2287,8 +2321,8 @@ function initSpriteTool() {
       const usableWidth = Math.max(1, outputWidth - padding * 2);
       const usableHeight = Math.max(1, outputHeight - padding * 2);
       const scale = (fit === "cover"
-        ? Math.max(usableWidth / bounds.width, usableHeight / bounds.height)
-        : Math.min(usableWidth / bounds.width, usableHeight / bounds.height)) * manualScale;
+        ? Math.max(usableWidth / scaleBounds.width, usableHeight / scaleBounds.height)
+        : Math.min(usableWidth / scaleBounds.width, usableHeight / scaleBounds.height)) * manualScale;
       const dw = Math.max(1, Math.round(bounds.width * scale));
       const dh = Math.max(1, Math.round(bounds.height * scale));
       const dx = Math.round((outputWidth - dw) / 2);
@@ -2467,7 +2501,7 @@ function initSpriteTool() {
     spriteEls.transformSummary.innerHTML = [
       `<strong>${outputSheet.rows} actions detected</strong> / ${outputSheet.cols} frames per action`,
       `Action ${row}: source ${outputSheet.sourceWidth} x ${outputSheet.sourceHeight} -> output ${outputSheet.width} x ${outputSheet.height}`,
-      `Visible sprite area: ${moveText} / fit scale ${scaleText} / padding ${meta?.padding ?? 0}px`,
+      `Visible sprite area: ${moveText} / fit scale ${scaleText} / ${isSpriteUniformScaleEnabled() ? "uniform scale on" : "per-frame scale"} / padding ${meta?.padding ?? 0}px`,
       "Hover this box or the preview to highlight the changed area."
     ].join("<br>");
   }
@@ -2554,6 +2588,10 @@ function initSpriteTool() {
 
   function isSpriteSmoothingEnabled() {
     return spriteEls.smoothInput?.checked ?? true;
+  }
+
+  function isSpriteUniformScaleEnabled() {
+    return spriteEls.uniformScaleInput?.checked ?? true;
   }
 
   function clampSpriteFps(value) {
