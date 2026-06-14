@@ -253,6 +253,11 @@
             <label>Animation FPS <input id="spriteFpsInput" type="number" min="1" max="30" step="1" value="8"></label>
             <label>Canvas Zoom <input id="spriteZoomInput" type="number" min="25" max="800" step="25" value="100"></label>
           </div>
+          <div class="sprite-guide-controls" aria-label="Sprite guide controls">
+            <label class="check-row"><input id="spriteCellGuideInput" type="checkbox" checked> Cell border</label>
+            <label class="check-row"><input id="spriteCenterGuideInput" type="checkbox" checked> Center guide</label>
+            <label class="check-row"><input id="spriteFootGuideInput" type="checkbox" checked> Foot guide</label>
+          </div>
         </div>
 
         <div class="control-group">
@@ -269,7 +274,6 @@
             <label><input type="radio" name="spriteFit" value="cover"> Fill cell</label>
           </div>
           <label class="check-row"><input id="spriteTrimInput" type="checkbox" checked> Auto trim transparent border</label>
-          <label class="check-row"><input id="spriteGuideInput" type="checkbox" checked> Show center and foot guide</label>
           <label class="check-row"><input id="spriteSmoothInput" type="checkbox" checked> Smooth preview for clean image quality</label>
         </div>
 
@@ -295,9 +299,14 @@
         </div>
         <div class="sprite-action-preview" id="spriteActionPreview">
           <canvas id="spriteAnimationCanvas" width="64" height="64"></canvas>
+          <div class="sprite-transform-overlay" id="spriteTransformOverlay" aria-hidden="true"></div>
           <span id="spriteAnimationEmpty">Upload a sprite sheet to preview one action row.</span>
         </div>
+        <div class="sprite-action-selector" id="spriteActionSelector" aria-label="Sprite action rows"></div>
         <div class="sprite-walk-preview" id="spriteWalkPreview"></div>
+        <div class="sprite-transform-summary" id="spriteTransformSummary">
+          Upload a sprite sheet to see how each frame is remapped.
+        </div>
         <div class="sprite-info-card">
           <strong>What this fixes</strong>
           <p>서로 다른 크기의 리소스를 가져올 때 캐릭터가 한쪽으로 쏠리거나 이동 중 흔들리는 문제를 줄입니다. 투명 영역을 기준으로 실제 캐릭터 영역을 찾고, 목표 셀의 중앙 또는 발 기준 위치로 다시 배치합니다.</p>

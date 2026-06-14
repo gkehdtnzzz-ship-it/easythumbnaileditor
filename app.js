@@ -1842,7 +1842,9 @@ function initSpriteTool() {
     fpsInput: document.querySelector("#spriteFpsInput"),
     zoomInput: document.querySelector("#spriteZoomInput"),
     trimInput: document.querySelector("#spriteTrimInput"),
-    guideInput: document.querySelector("#spriteGuideInput"),
+    cellGuideInput: document.querySelector("#spriteCellGuideInput"),
+    centerGuideInput: document.querySelector("#spriteCenterGuideInput"),
+    footGuideInput: document.querySelector("#spriteFootGuideInput"),
     smoothInput: document.querySelector("#spriteSmoothInput"),
     autoButton: document.querySelector("#spriteAutoButton"),
     sourceInfo: document.querySelector("#spriteSourceInfo"),
@@ -1852,8 +1854,11 @@ function initSpriteTool() {
     tool: document.querySelector("#spriteTool"),
     preview: document.querySelector("#spriteWalkPreview"),
     actionPreview: document.querySelector("#spriteActionPreview"),
+    actionSelector: document.querySelector("#spriteActionSelector"),
     actionCanvas: document.querySelector("#spriteAnimationCanvas"),
     actionEmpty: document.querySelector("#spriteAnimationEmpty"),
+    transformSummary: document.querySelector("#spriteTransformSummary"),
+    transformOverlay: document.querySelector("#spriteTransformOverlay"),
     previewPanel: document.querySelector(".sprite-preview-panel"),
     previewStatus: document.querySelector("#spritePreviewStatus"),
     downloadButton: document.querySelector("#spriteDownloadButton")
@@ -1864,11 +1869,14 @@ function initSpriteTool() {
   const spriteCtx = spriteEls.canvas.getContext("2d");
   const actionCtx = spriteEls.actionCanvas?.getContext("2d");
   const spritePresets = [
+    { id: "unity-32", label: "Unity Pixel", size: "32 x 32", width: 32, height: 32, sourceWidth: 32, sourceHeight: 32, anchor: "bottom" },
     { id: "unity-64", label: "Unity 2D", size: "64 x 64", width: 64, height: 64, sourceWidth: 64, sourceHeight: 64, anchor: "bottom" },
     { id: "unity-128", label: "Unity HD", size: "128 x 128", width: 128, height: 128, sourceWidth: 128, sourceHeight: 128, anchor: "bottom" },
     { id: "unreal-128", label: "Unreal Paper2D", size: "128 x 128", width: 128, height: 128, sourceWidth: 128, sourceHeight: 128, anchor: "bottom" },
+    { id: "godot-16", label: "Godot Tiny", size: "16 x 16", width: 16, height: 16, sourceWidth: 16, sourceHeight: 16, anchor: "bottom" },
     { id: "godot-32", label: "Godot Pixel", size: "32 x 32", width: 32, height: 32, sourceWidth: 32, sourceHeight: 32, anchor: "bottom" },
     { id: "godot-64", label: "Godot Character", size: "64 x 64", width: 64, height: 64, sourceWidth: 64, sourceHeight: 64, anchor: "bottom" },
+    { id: "rpg-maker-vx", label: "RPG Maker VX/Ace", size: "32 x 32", width: 32, height: 32, sourceWidth: 32, sourceHeight: 32, anchor: "bottom" },
     { id: "rpg-maker-mv", label: "RPG Maker MV/MZ", size: "48 x 48", width: 48, height: 48, sourceWidth: 48, sourceHeight: 48, anchor: "bottom" },
     { id: "rpg-maker-xp", label: "RPG Maker XP", size: "32 x 48", width: 32, height: 48, sourceWidth: 32, sourceHeight: 48, anchor: "bottom" },
     { id: "nekoland-96", label: "Nekoland", size: "96 x 96", width: 96, height: 96, sourceWidth: 32, sourceHeight: 48, anchor: "bottom" },
@@ -1884,7 +1892,8 @@ function initSpriteTool() {
     outputSheet: null,
     zoom: 1,
     animationTimer: null,
-    animationIndex: 0
+    animationIndex: 0,
+    showTransformOverlay: false
   };
 
   spriteEls.tabs.forEach((button) => {
@@ -1967,8 +1976,25 @@ function initSpriteTool() {
     spriteEls.zoomInput.value = String(Math.round(spriteState.zoom * 100));
     applySpriteCanvasZoom();
   }, { passive: false });
-  [...document.querySelectorAll("input[name='spriteAnchor'], input[name='spriteFit']"), spriteEls.trimInput, spriteEls.guideInput, spriteEls.smoothInput].forEach((input) => {
+  [
+    ...document.querySelectorAll("input[name='spriteAnchor'], input[name='spriteFit']"),
+    spriteEls.trimInput,
+    spriteEls.cellGuideInput,
+    spriteEls.centerGuideInput,
+    spriteEls.footGuideInput,
+    spriteEls.smoothInput
+  ].filter(Boolean).forEach((input) => {
     input.addEventListener("change", renderSprite);
+  });
+  [spriteEls.actionPreview, spriteEls.transformSummary].filter(Boolean).forEach((target) => {
+    target.addEventListener("mouseenter", () => {
+      spriteState.showTransformOverlay = true;
+      spriteEls.previewPanel?.classList.add("is-overlaying");
+    });
+    target.addEventListener("mouseleave", () => {
+      spriteState.showTransformOverlay = false;
+      spriteEls.previewPanel?.classList.remove("is-overlaying");
+    });
   });
   spriteEls.autoButton.addEventListener("click", () => {
     autoDetectSpriteSourceFrame();
@@ -2056,6 +2082,35 @@ function initSpriteTool() {
       });
     }
 
+    [
+      [3, 4],
+      [4, 4],
+      [4, 3],
+      [8, 4],
+      [8, 8],
+      [12, 8],
+      [4, 8]
+    ].forEach(([cols, rows]) => {
+      if (sourceWidth % cols !== 0 || sourceHeight % rows !== 0) return;
+      const frameWidth = sourceWidth / cols;
+      const frameHeight = sourceHeight / rows;
+      if (frameWidth < 8 || frameHeight < 8) return;
+      const aspect = frameWidth / frameHeight;
+      const targetAspect = targetWidth / targetHeight;
+      candidates.push({
+        width: frameWidth,
+        height: frameHeight,
+        scale: Math.min(targetWidth / frameWidth, targetHeight / frameHeight),
+        cols,
+        rows,
+        frames: cols * rows,
+        score: 72
+          + (rows === 4 ? 20 : 0)
+          + (cols === 4 ? 20 : 0)
+          + (Math.abs(aspect - targetAspect) < 0.34 ? 10 : 0)
+      });
+    });
+
     if (!candidates.length) {
       spriteEls.sourceWidthInput.value = String(sourceWidth);
       spriteEls.sourceHeightInput.value = String(sourceHeight);
@@ -2088,7 +2143,9 @@ function initSpriteTool() {
       spriteCtx.textAlign = "center";
       spriteCtx.fillText("Upload", width / 2, height / 2);
       spriteEls.preview.innerHTML = "";
+      spriteEls.actionSelector.innerHTML = "";
       setSpriteActionEmpty("Upload a sprite sheet to preview one action row.");
+      updateSpriteTransformSummary(null);
       spriteEls.previewStatus.textContent = "waiting";
       spriteState.renderDataUrl = "";
       spriteState.outputSheet = null;
@@ -2105,10 +2162,12 @@ function initSpriteTool() {
     drawSpriteChecker(spriteCtx, spriteEls.canvas.width, spriteEls.canvas.height);
     spriteCtx.imageSmoothingEnabled = false;
     spriteCtx.drawImage(outputSheet.canvas, 0, 0);
-    if (spriteEls.guideInput.checked) drawSpriteSheetGuides(spriteCtx, outputSheet);
+    drawSpriteSheetGuides(spriteCtx, outputSheet);
     spriteState.renderDataUrl = outputSheet.canvas.toDataURL("image/png");
+    renderSpriteActionButtons(outputSheet);
     renderSpriteWalkPreview();
     const frameCount = renderSpriteActionPreview();
+    updateSpriteTransformSummary(outputSheet);
     updateSpriteCanvasInfo(width, height);
     applySpriteCanvasZoom();
     spriteEls.previewStatus.textContent = frameCount
@@ -2164,10 +2223,12 @@ function initSpriteTool() {
     outputCtx.clearRect(0, 0, output.width, output.height);
 
     const frameUrls = [];
+    const frameMeta = [];
     for (let row = 0; row < rows; row += 1) {
       const rowFrames = [];
+      const rowMeta = [];
       for (let col = 0; col < cols; col += 1) {
-        const frameCanvas = renderSpriteFrameCanvas(
+        const frame = renderSpriteFrameCanvas(
           source,
           col * sourceWidth,
           row * sourceHeight,
@@ -2176,13 +2237,15 @@ function initSpriteTool() {
           outputWidth,
           outputHeight
         );
-        outputCtx.drawImage(frameCanvas, col * outputWidth, row * outputHeight);
-        rowFrames.push(frameCanvas.toDataURL("image/png"));
+        outputCtx.drawImage(frame.canvas, col * outputWidth, row * outputHeight);
+        rowFrames.push(frame.canvas.toDataURL("image/png"));
+        rowMeta.push(frame.meta);
       }
       frameUrls.push(rowFrames);
+      frameMeta.push(rowMeta);
     }
 
-    return { canvas: output, cols, rows, frameUrls, width: outputWidth, height: outputHeight };
+    return { canvas: output, cols, rows, frameUrls, frameMeta, sourceWidth, sourceHeight, width: outputWidth, height: outputHeight };
   }
 
   function renderSpriteFrameCanvas(source, sx, sy, sourceWidth, sourceHeight, outputWidth, outputHeight) {
@@ -2202,6 +2265,20 @@ function initSpriteTool() {
     output.height = outputHeight;
     const outputCtx = output.getContext("2d");
     outputCtx.clearRect(0, 0, outputWidth, outputHeight);
+    const meta = {
+      sourceWidth,
+      sourceHeight,
+      outputWidth,
+      outputHeight,
+      bounds,
+      dx: 0,
+      dy: 0,
+      dw: 0,
+      dh: 0,
+      scale: 0,
+      padding: Math.max(0, Number(spriteEls.paddingInput.value) || 0),
+      trimmed: spriteEls.trimInput.checked
+    };
     if (bounds.width > 0 && bounds.height > 0) {
       const padding = Math.max(0, Number(spriteEls.paddingInput.value) || 0);
       const manualScale = Math.max(1, Number(spriteEls.scaleInput.value) || 100) / 100;
@@ -2216,11 +2293,12 @@ function initSpriteTool() {
       const dh = Math.max(1, Math.round(bounds.height * scale));
       const dx = Math.round((outputWidth - dw) / 2);
       const dy = anchor === "bottom" ? Math.round(outputHeight - padding - dh) : Math.round((outputHeight - dh) / 2);
+      Object.assign(meta, { dx, dy, dw, dh, scale, padding });
       outputCtx.imageSmoothingEnabled = isSpriteSmoothingEnabled();
       outputCtx.imageSmoothingQuality = "high";
       outputCtx.drawImage(frameCanvas, bounds.x, bounds.y, bounds.width, bounds.height, dx, dy, dw, dh);
     }
-    return output;
+    return { canvas: output, meta };
   }
 
   function drawSpriteSheetGuides(context, outputSheet) {
@@ -2293,25 +2371,31 @@ function initSpriteTool() {
     const centerY = y + height / 2;
     context.save();
     context.lineWidth = 1;
-    context.strokeStyle = "rgba(75, 167, 255, .42)";
-    context.setLineDash([]);
-    context.strokeRect(left + 0.5, top + 0.5, Math.max(0, width - 1), Math.max(0, height - 1));
+    if (spriteEls.cellGuideInput?.checked) {
+      context.strokeStyle = "rgba(75, 167, 255, .42)";
+      context.setLineDash([]);
+      context.strokeRect(left + 0.5, top + 0.5, Math.max(0, width - 1), Math.max(0, height - 1));
+    }
 
-    context.strokeStyle = "rgba(0, 220, 155, .92)";
-    context.setLineDash([5, 4]);
-    context.beginPath();
-    context.moveTo(centerX, top);
-    context.lineTo(centerX, bottom);
-    context.moveTo(left, centerY);
-    context.lineTo(right, centerY);
-    context.stroke();
+    if (spriteEls.centerGuideInput?.checked) {
+      context.strokeStyle = "rgba(0, 220, 155, .92)";
+      context.setLineDash([5, 4]);
+      context.beginPath();
+      context.moveTo(centerX, top);
+      context.lineTo(centerX, bottom);
+      context.moveTo(left, centerY);
+      context.lineTo(right, centerY);
+      context.stroke();
+    }
 
-    context.strokeStyle = "rgba(255, 202, 78, .95)";
-    context.setLineDash([7, 4]);
-    context.beginPath();
-    context.moveTo(left, bottom - 0.5);
-    context.lineTo(right, bottom - 0.5);
-    context.stroke();
+    if (spriteEls.footGuideInput?.checked) {
+      context.strokeStyle = "rgba(255, 202, 78, .95)";
+      context.setLineDash([7, 4]);
+      context.beginPath();
+      context.moveTo(left, bottom - 0.5);
+      context.lineTo(right, bottom - 0.5);
+      context.stroke();
+    }
     context.restore();
   }
 
@@ -2330,6 +2414,23 @@ function initSpriteTool() {
     });
   }
 
+  function renderSpriteActionButtons(outputSheet) {
+    spriteEls.actionSelector.innerHTML = "";
+    if (!outputSheet?.rows) return;
+    for (let row = 1; row <= outputSheet.rows; row += 1) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "sprite-action-button";
+      button.classList.toggle("is-active", row === getSpriteRow());
+      button.textContent = `Action ${row}`;
+      button.addEventListener("click", () => {
+        spriteEls.rowInput.value = String(row);
+        renderSprite();
+      });
+      spriteEls.actionSelector.append(button);
+    }
+  }
+
   function renderSpriteActionPreview() {
     const frames = getSelectedSpriteRowFrames();
     if (!frames.length) {
@@ -2337,7 +2438,7 @@ function initSpriteTool() {
       setSpriteActionEmpty("No row frames detected for this cell size.");
       return 0;
     }
-    startSpriteAnimation(frames);
+    startSpriteAnimation(frames, getSelectedSpriteRowMeta());
     return frames.length;
   }
 
@@ -2347,7 +2448,31 @@ function initSpriteTool() {
     return spriteState.outputSheet.frameUrls[row] || [];
   }
 
-  function startSpriteAnimation(frameUrls) {
+  function getSelectedSpriteRowMeta() {
+    if (!spriteState.outputSheet) return [];
+    const row = Math.min(spriteState.outputSheet.rows, getSpriteRow()) - 1;
+    return spriteState.outputSheet.frameMeta[row] || [];
+  }
+
+  function updateSpriteTransformSummary(outputSheet) {
+    if (!spriteEls.transformSummary) return;
+    if (!outputSheet) {
+      spriteEls.transformSummary.textContent = "Upload a sprite sheet to see how each frame is remapped.";
+      return;
+    }
+    const row = getSpriteRow();
+    const meta = getSelectedSpriteRowMeta().find((item) => item?.dw && item?.dh) || getSelectedSpriteRowMeta()[0];
+    const scaleText = meta?.scale ? `${Math.round(meta.scale * 100)}%` : "0%";
+    const moveText = meta ? `x ${meta.dx}, y ${meta.dy}, ${meta.dw} x ${meta.dh}` : "no visible pixels";
+    spriteEls.transformSummary.innerHTML = [
+      `<strong>${outputSheet.rows} actions detected</strong> / ${outputSheet.cols} frames per action`,
+      `Action ${row}: source ${outputSheet.sourceWidth} x ${outputSheet.sourceHeight} -> output ${outputSheet.width} x ${outputSheet.height}`,
+      `Visible sprite area: ${moveText} / fit scale ${scaleText} / padding ${meta?.padding ?? 0}px`,
+      "Hover this box or the preview to highlight the changed area."
+    ].join("<br>");
+  }
+
+  function startSpriteAnimation(frameUrls, frameMeta = []) {
     if (!spriteEls.actionCanvas || !actionCtx) return;
     stopSpriteAnimation();
     spriteEls.actionPreview.classList.add("is-playing");
@@ -2365,6 +2490,7 @@ function initSpriteTool() {
     spriteEls.fpsInput.value = String(fps);
     spriteState.animationIndex = Math.min(spriteState.animationIndex, images.length - 1);
     const drawFrame = () => {
+      const index = spriteState.animationIndex;
       const image = images[spriteState.animationIndex];
       actionCtx.clearRect(0, 0, width, height);
       drawSpriteChecker(actionCtx, width, height);
@@ -2372,12 +2498,35 @@ function initSpriteTool() {
         actionCtx.imageSmoothingEnabled = isSpriteSmoothingEnabled();
         actionCtx.imageSmoothingQuality = "high";
         actionCtx.drawImage(image, 0, 0, width, height);
+        if (spriteState.showTransformOverlay) {
+          drawSpriteTransformOverlay(actionCtx, frameMeta[index], width, height);
+        }
       }
       spriteState.animationIndex = (spriteState.animationIndex + 1) % images.length;
     };
     drawFrame();
     spriteState.animationTimer = window.setInterval(drawFrame, 1000 / fps);
     spriteEls.previewStatus.textContent = `playing ${images.length} frames @ ${fps} fps`;
+  }
+
+  function drawSpriteTransformOverlay(context, meta, width, height) {
+    if (!meta?.dw || !meta?.dh) return;
+    context.save();
+    context.fillStyle = "rgba(255, 84, 43, 0.22)";
+    context.strokeStyle = "rgba(255, 111, 48, 0.95)";
+    context.lineWidth = Math.max(1, Math.round(Math.min(width, height) / 64));
+    context.setLineDash([]);
+    context.fillRect(meta.dx, meta.dy, meta.dw, meta.dh);
+    context.strokeRect(meta.dx + 0.5, meta.dy + 0.5, Math.max(0, meta.dw - 1), Math.max(0, meta.dh - 1));
+    context.strokeStyle = "rgba(255, 45, 74, 0.96)";
+    context.setLineDash([4, 3]);
+    context.beginPath();
+    context.moveTo(width / 2, 0);
+    context.lineTo(width / 2, height);
+    context.moveTo(0, height / 2);
+    context.lineTo(width, height / 2);
+    context.stroke();
+    context.restore();
   }
 
   function stopSpriteAnimation() {

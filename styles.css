@@ -336,6 +336,22 @@ body[data-active-tool="sprite"] #downloadButton {
   margin-top: 10px;
 }
 
+.sprite-guide-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.sprite-guide-controls .check-row {
+  min-height: 34px;
+  margin-top: 0;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 0 9px;
+  background: var(--panel-strong);
+}
+
 .check-row {
   display: flex;
   align-items: center;
@@ -406,6 +422,7 @@ body[data-active-tool="sprite"] #downloadButton {
 }
 
 .sprite-action-preview {
+  position: relative;
   display: grid;
   place-items: center;
   min-height: 220px;
@@ -445,6 +462,59 @@ body[data-active-tool="sprite"] #downloadButton {
 
 .sprite-action-preview.is-playing span {
   display: none;
+}
+
+.sprite-transform-overlay {
+  position: absolute;
+  left: var(--overlay-x, 35%);
+  top: var(--overlay-y, 35%);
+  width: var(--overlay-w, 30%);
+  height: var(--overlay-h, 30%);
+  display: none;
+  border: 2px solid rgba(255, 99, 51, 0.95);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at center, rgba(255, 122, 48, 0.28), rgba(255, 55, 55, 0.1) 70%);
+  box-shadow: 0 0 0 999px rgba(11, 17, 23, 0.18), 0 0 26px rgba(255, 88, 42, 0.38);
+  pointer-events: none;
+}
+
+.sprite-action-selector {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(62px, 1fr));
+  gap: 8px;
+}
+
+.sprite-action-button {
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 0 10px;
+  background: var(--panel-strong);
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.sprite-action-button.is-active {
+  border-color: color-mix(in srgb, #ff6a33 70%, var(--brand));
+  background: linear-gradient(135deg, rgba(255, 105, 50, 0.86), rgba(255, 53, 72, 0.72));
+  color: #fff;
+}
+
+.sprite-transform-summary {
+  border: 1px solid color-mix(in srgb, #ff6a33 35%, var(--line));
+  border-radius: 8px;
+  padding: 12px;
+  background: linear-gradient(135deg, rgba(255, 108, 50, 0.12), rgba(255, 51, 90, 0.08));
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.55;
+}
+
+.sprite-transform-summary strong {
+  color: var(--text);
 }
 
 .sprite-preview-panel.is-pixelated #spriteAnimationCanvas,
