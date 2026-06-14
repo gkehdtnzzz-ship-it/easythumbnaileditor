@@ -2065,7 +2065,11 @@ function initSpriteTool() {
     const sourceHeight = spriteState.image.naturalHeight;
     const candidates = [];
 
-    if (sourceWidth % presetSourceWidth === 0 && sourceHeight % presetSourceHeight === 0) {
+    if (
+      sourceWidth % presetSourceWidth === 0
+      && sourceHeight % presetSourceHeight === 0
+      && getSpriteFrameSplitRatio(spriteState.image, presetSourceWidth, presetSourceHeight) < 0.35
+    ) {
       spriteEls.sourceWidthInput.value = String(presetSourceWidth);
       spriteEls.sourceHeightInput.value = String(presetSourceHeight);
       return;
@@ -2119,6 +2123,39 @@ function initSpriteTool() {
       });
     });
 
+    [
+      [16, 16],
+      [24, 32],
+      [32, 32],
+      [32, 48],
+      [48, 48],
+      [64, 48],
+      [64, 64],
+      [64, 96],
+      [96, 96],
+      [128, 128]
+    ].forEach(([frameWidth, frameHeight]) => {
+      if (sourceWidth % frameWidth !== 0 || sourceHeight % frameHeight !== 0) return;
+      const cols = sourceWidth / frameWidth;
+      const rows = sourceHeight / frameHeight;
+      const frames = cols * rows;
+      if (frames > 12000) return;
+      const splitRatio = getSpriteFrameSplitRatio(spriteState.image, frameWidth, frameHeight);
+      candidates.push({
+        width: frameWidth,
+        height: frameHeight,
+        scale: Math.min(targetWidth / frameWidth, targetHeight / frameHeight),
+        cols,
+        rows,
+        frames,
+        score: 110
+          - splitRatio * 130
+          + (frameHeight === 48 ? 18 : 0)
+          + (frameWidth === 64 ? 16 : 0)
+          + (frameWidth === presetSourceWidth && frameHeight === presetSourceHeight ? 8 : 0)
+      });
+    });
+
     if (!candidates.length) {
       spriteEls.sourceWidthInput.value = String(sourceWidth);
       spriteEls.sourceHeightInput.value = String(sourceHeight);
@@ -2129,6 +2166,35 @@ function initSpriteTool() {
     const best = candidates[0];
     spriteEls.sourceWidthInput.value = String(best.width);
     spriteEls.sourceHeightInput.value = String(best.height);
+  }
+
+  function getSpriteFrameSplitRatio(image, frameWidth, frameHeight) {
+    if (!image || frameWidth < 1 || frameHeight < 1) return 1;
+    const cols = Math.max(1, Math.floor(image.naturalWidth / frameWidth));
+    const rows = Math.max(1, Math.floor(image.naturalHeight / frameHeight));
+    const sampleRows = Math.min(rows, 28);
+    const maxSamples = 700;
+    let checked = 0;
+    let nonempty = 0;
+    let split = 0;
+    const probe = document.createElement("canvas");
+    probe.width = frameWidth;
+    probe.height = frameHeight;
+    const probeCtx = probe.getContext("2d", { willReadFrequently: true });
+    for (let row = 0; row < sampleRows; row += 1) {
+      for (let col = 0; col < cols; col += 1) {
+        if (checked >= maxSamples) break;
+        checked += 1;
+        probeCtx.clearRect(0, 0, frameWidth, frameHeight);
+        probeCtx.drawImage(image, col * frameWidth, row * frameHeight, frameWidth, frameHeight, 0, 0, frameWidth, frameHeight);
+        const bounds = findCanvasBounds(probeCtx, frameWidth, frameHeight);
+        if (!bounds.width || !bounds.height) continue;
+        nonempty += 1;
+        if (bounds.x <= 0 || bounds.x + bounds.width >= frameWidth) split += 1;
+      }
+      if (checked >= maxSamples) break;
+    }
+    return nonempty ? split / nonempty : 1;
   }
 
   function renderSprite() {
