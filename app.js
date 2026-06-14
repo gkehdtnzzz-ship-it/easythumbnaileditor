@@ -1869,6 +1869,8 @@ function initSpriteTool() {
 
   const spriteCtx = spriteEls.canvas.getContext("2d");
   const actionCtx = spriteEls.actionCanvas?.getContext("2d");
+  const fastPreviewFrameLimit = 320;
+  const fastPreviewPixelLimit = 14000000;
   const spritePresets = [
     { id: "unity-32", label: "Unity Pixel", size: "32 x 32", width: 32, height: 32, sourceWidth: 32, sourceHeight: 32, anchor: "bottom" },
     { id: "unity-64", label: "Unity 2D", size: "64 x 64", width: 64, height: 64, sourceWidth: 64, sourceHeight: 64, anchor: "bottom" },
@@ -2005,9 +2007,11 @@ function initSpriteTool() {
     renderSprite();
   });
   spriteEls.downloadButton.addEventListener("click", () => {
-    if (!spriteState.renderDataUrl) return;
+    if (!spriteState.image) return;
+    const outputSheet = buildSpriteOutputSheet({ previewOnly: false, includeDataUrls: false });
+    const dataUrl = outputSheet.canvas.toDataURL("image/png");
     const link = document.createElement("a");
-    link.href = spriteState.renderDataUrl;
+    link.href = dataUrl;
     link.download = `${spriteState.imageName}-${getSpriteWidth()}x${getSpriteHeight()}-spritesheet.png`;
     link.click();
   });
@@ -2156,7 +2160,13 @@ function initSpriteTool() {
       return;
     }
 
-    const outputSheet = buildSpriteOutputSheet();
+    const layout = getSpriteSheetLayout();
+    const previewOnly = shouldUseFastSpritePreview(layout);
+    const outputSheet = buildSpriteOutputSheet({
+      previewOnly,
+      selectedRow: getSpriteRow() - 1,
+      includeDataUrls: true
+    });
     spriteState.outputSheet = outputSheet;
     spriteEls.canvas.width = outputSheet.canvas.width;
     spriteEls.canvas.height = outputSheet.canvas.height;
@@ -2165,7 +2175,7 @@ function initSpriteTool() {
     spriteCtx.imageSmoothingEnabled = false;
     spriteCtx.drawImage(outputSheet.canvas, 0, 0);
     drawSpriteSheetGuides(spriteCtx, outputSheet);
-    spriteState.renderDataUrl = outputSheet.canvas.toDataURL("image/png");
+    spriteState.renderDataUrl = previewOnly ? "" : outputSheet.canvas.toDataURL("image/png");
     renderSpriteActionButtons(outputSheet);
     renderSpriteWalkPreview();
     const frameCount = renderSpriteActionPreview();
@@ -2173,7 +2183,7 @@ function initSpriteTool() {
     updateSpriteCanvasInfo(width, height);
     applySpriteCanvasZoom();
     spriteEls.previewStatus.textContent = frameCount
-      ? `playing row ${getSpriteRow()} / ${getSpriteRowCount()} - ${frameCount} frames @ ${clampSpriteFps(Number(spriteEls.fpsInput.value) || 8)} fps`
+      ? `${previewOnly ? "fast preview - " : ""}playing row ${getSpriteRow()} / ${getSpriteRowCount()} - ${frameCount} frames @ ${clampSpriteFps(Number(spriteEls.fpsInput.value) || 8)} fps`
       : `row ${getSpriteRow()} / ${getSpriteRowCount()} - ${width} x ${height}`;
   }
 
@@ -2210,7 +2220,7 @@ function initSpriteTool() {
     };
   }
 
-  function buildSpriteOutputSheet() {
+  function getSpriteSheetLayout() {
     const source = spriteState.image;
     const sourceWidth = getSpriteSourceWidth();
     const sourceHeight = getSpriteSourceHeight();
@@ -2218,16 +2228,33 @@ function initSpriteTool() {
     const outputHeight = getSpriteHeight();
     const cols = Math.max(1, Math.floor(source.naturalWidth / sourceWidth));
     const rows = Math.max(1, Math.floor(source.naturalHeight / sourceHeight));
+    return { source, sourceWidth, sourceHeight, outputWidth, outputHeight, cols, rows };
+  }
+
+  function shouldUseFastSpritePreview(layout) {
+    const frameCount = layout.cols * layout.rows;
+    const outputPixels = layout.cols * layout.outputWidth * layout.rows * layout.outputHeight;
+    return frameCount > fastPreviewFrameLimit || outputPixels > fastPreviewPixelLimit;
+  }
+
+  function buildSpriteOutputSheet(options = {}) {
+    const layout = getSpriteSheetLayout();
+    const { source, sourceWidth, sourceHeight, outputWidth, outputHeight, cols, rows } = layout;
+    const previewOnly = !!options.previewOnly;
+    const includeDataUrls = options.includeDataUrls !== false;
+    const selectedRow = Math.min(rows - 1, Math.max(0, Number(options.selectedRow) || 0));
+    const renderStartRow = previewOnly ? selectedRow : 0;
+    const renderRows = previewOnly ? 1 : rows;
     const output = document.createElement("canvas");
     output.width = cols * outputWidth;
-    output.height = rows * outputHeight;
+    output.height = renderRows * outputHeight;
     const outputCtx = output.getContext("2d");
     outputCtx.clearRect(0, 0, output.width, output.height);
     const uniformBounds = getSpriteUniformBounds(source, sourceWidth, sourceHeight, cols, rows);
 
     const frameUrls = [];
     const frameMeta = [];
-    for (let row = 0; row < rows; row += 1) {
+    for (let row = renderStartRow; row < renderStartRow + renderRows; row += 1) {
       const rowFrames = [];
       const rowMeta = [];
       for (let col = 0; col < cols; col += 1) {
@@ -2241,19 +2268,36 @@ function initSpriteTool() {
           outputHeight,
           uniformBounds
         );
-        outputCtx.drawImage(frame.canvas, col * outputWidth, row * outputHeight);
-        rowFrames.push(frame.canvas.toDataURL("image/png"));
+        outputCtx.drawImage(frame.canvas, col * outputWidth, (row - renderStartRow) * outputHeight);
+        if (includeDataUrls) rowFrames.push(frame.canvas.toDataURL("image/png"));
         rowMeta.push(frame.meta);
       }
-      frameUrls.push(rowFrames);
-      frameMeta.push(rowMeta);
+      frameUrls[row] = rowFrames;
+      frameMeta[row] = rowMeta;
     }
 
-    return { canvas: output, cols, rows, frameUrls, frameMeta, sourceWidth, sourceHeight, uniformBounds, width: outputWidth, height: outputHeight };
+    return {
+      canvas: output,
+      cols,
+      rows,
+      renderStartRow,
+      renderRows,
+      previewOnly,
+      frameUrls,
+      frameMeta,
+      sourceWidth,
+      sourceHeight,
+      uniformBounds,
+      width: outputWidth,
+      height: outputHeight
+    };
   }
 
   function getSpriteUniformBounds(source, sourceWidth, sourceHeight, cols, rows) {
     if (!isSpriteUniformScaleEnabled() || !spriteEls.trimInput.checked) {
+      return { x: 0, y: 0, width: sourceWidth, height: sourceHeight };
+    }
+    if (cols * rows > fastPreviewFrameLimit) {
       return { x: 0, y: 0, width: sourceWidth, height: sourceHeight };
     }
     let maxWidth = 0;
@@ -2337,7 +2381,8 @@ function initSpriteTool() {
 
   function drawSpriteSheetGuides(context, outputSheet) {
     context.save();
-    for (let row = 0; row < outputSheet.rows; row += 1) {
+    const guideRows = outputSheet.renderRows || outputSheet.rows;
+    for (let row = 0; row < guideRows; row += 1) {
       for (let col = 0; col < outputSheet.cols; col += 1) {
         drawSpriteCellGuides(
           context,
@@ -2451,7 +2496,14 @@ function initSpriteTool() {
   function renderSpriteActionButtons(outputSheet) {
     spriteEls.actionSelector.innerHTML = "";
     if (!outputSheet?.rows) return;
-    for (let row = 1; row <= outputSheet.rows; row += 1) {
+    getVisibleSpriteActionRows(outputSheet.rows, getSpriteRow()).forEach((row) => {
+      if (row === "gap") {
+        const gap = document.createElement("span");
+        gap.className = "sprite-action-gap";
+        gap.textContent = "...";
+        spriteEls.actionSelector.append(gap);
+        return;
+      }
       const button = document.createElement("button");
       button.type = "button";
       button.className = "sprite-action-button";
@@ -2462,7 +2514,24 @@ function initSpriteTool() {
         renderSprite();
       });
       spriteEls.actionSelector.append(button);
+    });
+  }
+
+  function getVisibleSpriteActionRows(totalRows, currentRow) {
+    if (totalRows <= 20) {
+      return Array.from({ length: totalRows }, (_, index) => index + 1);
     }
+    const rows = new Set([1, 2, totalRows - 1, totalRows]);
+    for (let row = currentRow - 3; row <= currentRow + 3; row += 1) {
+      if (row >= 1 && row <= totalRows) rows.add(row);
+    }
+    const sorted = [...rows].sort((a, b) => a - b);
+    const visible = [];
+    sorted.forEach((row, index) => {
+      if (index && row - sorted[index - 1] > 1) visible.push("gap");
+      visible.push(row);
+    });
+    return visible;
   }
 
   function renderSpriteActionPreview() {
@@ -2500,6 +2569,7 @@ function initSpriteTool() {
     const moveText = meta ? `x ${meta.dx}, y ${meta.dy}, ${meta.dw} x ${meta.dh}` : "no visible pixels";
     spriteEls.transformSummary.innerHTML = [
       `<strong>${outputSheet.rows} actions detected</strong> / ${outputSheet.cols} frames per action`,
+      outputSheet.previewOnly ? "Large sheet fast preview: only the selected action row is rendered while editing." : "Full sheet preview is rendered.",
       `Action ${row}: source ${outputSheet.sourceWidth} x ${outputSheet.sourceHeight} -> output ${outputSheet.width} x ${outputSheet.height}`,
       `Visible sprite area: ${moveText} / fit scale ${scaleText} / ${isSpriteUniformScaleEnabled() ? "uniform scale on" : "per-frame scale"} / padding ${meta?.padding ?? 0}px`,
       "Hover this box or the preview to highlight the changed area."

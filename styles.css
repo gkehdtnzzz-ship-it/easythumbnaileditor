@@ -502,6 +502,14 @@ body[data-active-tool="sprite"] #downloadButton {
   color: #fff;
 }
 
+.sprite-action-gap {
+  display: grid;
+  place-items: center;
+  min-height: 34px;
+  color: var(--muted);
+  font-weight: 900;
+}
+
 .sprite-transform-summary {
   border: 1px solid color-mix(in srgb, #ff6a33 35%, var(--line));
   border-radius: 8px;
