@@ -199,10 +199,10 @@ body[data-active-tool="sprite"] #downloadButton {
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+  grid-template-columns: minmax(290px, 340px) minmax(420px, 1fr) minmax(300px, 380px);
   grid-template-areas:
-    "tools tools"
-    "canvas preview";
+    "preset preset preset"
+    "tools canvas preview";
   gap: 18px;
   padding: 18px;
   min-height: calc(100vh - 82px);
@@ -231,6 +231,7 @@ body[data-active-tool="sprite"] #downloadButton {
 .tool-panel,
 .preview-panel,
 .canvas-stage,
+.preset-topbar,
 .sprite-panel,
 .sprite-stage,
 .sprite-preview-panel {
@@ -246,12 +247,12 @@ body[data-active-tool="sprite"] #downloadButton {
   gap: 14px;
 }
 
+.preset-topbar {
+  grid-area: preset;
+}
+
 .tool-panel {
   grid-area: tools;
-  display: grid;
-  grid-template-columns: minmax(230px, 0.8fr) minmax(360px, 1.4fr) repeat(4, minmax(190px, 1fr));
-  align-items: start;
-  gap: 12px;
 }
 
 .canvas-stage {
@@ -279,11 +280,6 @@ body[data-active-tool="sprite"] #downloadButton {
   padding: 18px;
   text-align: center;
   border-style: dashed;
-}
-
-.tool-panel > .control-group,
-.tool-panel > .upload-zone {
-  min-height: 100%;
 }
 
 .upload-zone.dragging {
@@ -657,14 +653,8 @@ body[data-active-tool="sprite"] #downloadButton {
   padding: 14px;
 }
 
-.tool-panel .control-group {
-  max-height: 260px;
-  overflow: auto;
-}
-
-.tool-panel .upload-zone {
-  max-height: 260px;
-  overflow: auto;
+.preset-topbar .control-group {
+  overflow: hidden;
 }
 
 .group-title,
@@ -2436,13 +2426,10 @@ dd {
   .workspace {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
+      "preset"
       "tools"
       "canvas"
       "preview";
-  }
-
-  .tool-panel {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .sprite-workspace {

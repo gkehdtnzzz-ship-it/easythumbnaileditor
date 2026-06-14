@@ -74,6 +74,16 @@
     </nav>
 
     <main class="workspace" id="thumbnailTool" data-tool-panel="thumbnail">
+      <section class="preset-topbar" aria-label="Preset selection">
+        <div class="control-group">
+          <div class="group-title">
+            <h2 data-i18n="presetTitle">Preset</h2>
+            <span id="presetMeta">1280 x 720</span>
+          </div>
+          <div id="presetButtons" class="preset-groups" aria-label="Preview presets"></div>
+        </div>
+      </section>
+
       <section class="tool-panel" aria-label="Editor controls">
         <div class="upload-zone" id="dropZone">
           <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
@@ -92,14 +102,6 @@
             <span id="profileSlotStatus" data-i18n="slotEmpty">Empty</span>
           </div>
           <p data-i18n="uploadHelp">Drop or choose a PNG, JPG, WEBP, or GIF image.</p>
-        </div>
-
-        <div class="control-group">
-          <div class="group-title">
-            <h2 data-i18n="presetTitle">Preset</h2>
-            <span id="presetMeta">1280 x 720</span>
-          </div>
-          <div id="presetButtons" class="preset-groups" aria-label="Preview presets"></div>
         </div>
 
         <div class="control-group">
