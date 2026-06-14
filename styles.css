@@ -201,12 +201,13 @@ body[data-active-tool="sprite"] #downloadButton {
 .workspace {
   display: grid;
   max-width: 100vw;
-  grid-template-columns: minmax(290px, 340px) minmax(420px, 1fr) minmax(300px, 380px);
+  grid-template-columns: minmax(260px, 320px) minmax(360px, 1fr);
   grid-template-areas:
-    "preset preset preset"
-    "tools canvas preview";
-  gap: 18px;
-  padding: 18px;
+    "preset preset"
+    "tools canvas"
+    "preview preview";
+  gap: 14px;
+  padding: 14px;
   min-height: calc(100vh - 82px);
 }
 
@@ -246,7 +247,7 @@ body[data-active-tool="sprite"] #downloadButton {
 .sprite-preview-panel {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
 .preset-topbar {
@@ -997,7 +998,7 @@ dd {
 .canvas-stage {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  padding: 14px;
+  padding: 12px;
   overflow: hidden;
 }
 
@@ -1044,7 +1045,8 @@ dd {
 .canvas-shell {
   display: grid;
   place-items: center;
-  min-height: 360px;
+  min-height: 300px;
+  max-height: min(58vh, 620px);
   border-radius: 6px;
   background:
     linear-gradient(45deg, color-mix(in srgb, var(--line) 80%, transparent) 25%, transparent 25%),
@@ -1064,9 +1066,9 @@ dd {
 
 #editorCanvas {
   display: block;
-  width: min(100%, 920px);
+  width: min(100%, 760px);
   height: auto;
-  max-height: calc(100vh - 150px);
+  max-height: min(52vh, 560px);
   border: 1px solid rgba(15, 36, 48, 0.18);
   background: #fff;
   cursor: default;
@@ -1106,8 +1108,9 @@ dd {
 
 .preview-list {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 18px;
-  overflow: auto;
+  overflow: visible;
   padding-right: 4px;
 }
 
