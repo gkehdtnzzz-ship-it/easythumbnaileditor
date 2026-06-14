@@ -11,9 +11,9 @@
 
 Replace these placeholders after the final URL is known:
 
-- `https://example.com/` in `index.html`
-- `https://example.com/sitemap.xml` in `robots.txt`
-- all `https://example.com/...` URLs in `sitemap.xml`
+- `https://easythumbnaileditor.pages.dev/` in `index.html`
+- `https://easythumbnaileditor.pages.dev/sitemap.xml` in `robots.txt`
+- all `https://easythumbnaileditor.pages.dev/...` URLs in `sitemap.xml`
 
 If the GitHub Pages URL is used without a custom domain, it usually looks like:
 
