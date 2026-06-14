@@ -1948,8 +1948,10 @@ function initSpriteTool() {
     spriteState.preset = preset;
     spriteEls.widthInput.value = preset.width;
     spriteEls.heightInput.value = preset.height;
-    spriteEls.sourceWidthInput.value = preset.sourceWidth || preset.width;
-    spriteEls.sourceHeightInput.value = preset.sourceHeight || preset.height;
+    if (!spriteState.image) {
+      spriteEls.sourceWidthInput.value = preset.sourceWidth || preset.width;
+      spriteEls.sourceHeightInput.value = preset.sourceHeight || preset.height;
+    }
     const anchor = document.querySelector(`input[name="spriteAnchor"][value="${preset.anchor}"]`);
     if (anchor) anchor.checked = true;
     renderSpritePresetButtons();
@@ -2072,15 +2074,7 @@ function initSpriteTool() {
       return;
     }
 
-    if (
-      sourceWidth % presetSourceWidth === 0
-      && sourceHeight % presetSourceHeight === 0
-      && getSpriteFrameSplitRatio(spriteState.image, presetSourceWidth, presetSourceHeight) < 0.35
-    ) {
-      spriteEls.sourceWidthInput.value = String(presetSourceWidth);
-      spriteEls.sourceHeightInput.value = String(presetSourceHeight);
-      return;
-    }
+    const isWideStrip = sourceWidth / sourceHeight >= 3;
 
     for (let scale = 8; scale >= 1; scale -= 1) {
       const frameWidth = targetWidth * scale;
@@ -2097,7 +2091,10 @@ function initSpriteTool() {
         cols,
         rows,
         frames,
-        score: scale * 12 + Math.min(frames, 24) + (cols >= 3 || rows >= 3 ? 8 : 0)
+        score: scale * 12
+          + Math.min(frames, 24)
+          + (cols >= 3 || rows >= 3 ? 8 : 0)
+          + (isWideStrip && rows === 1 ? 72 : 0)
       });
     }
 
@@ -2116,6 +2113,7 @@ function initSpriteTool() {
       if (frameWidth < 8 || frameHeight < 8) return;
       const aspect = frameWidth / frameHeight;
       const targetAspect = targetWidth / targetHeight;
+      const splitRatio = getSpriteFrameSplitRatio(spriteState.image, frameWidth, frameHeight);
       candidates.push({
         width: frameWidth,
         height: frameHeight,
@@ -2127,6 +2125,9 @@ function initSpriteTool() {
           + (rows === 4 ? 20 : 0)
           + (cols === 4 ? 20 : 0)
           + (Math.abs(aspect - targetAspect) < 0.34 ? 10 : 0)
+          + (isWideStrip && rows === 1 ? 72 : 0)
+          - (isWideStrip && rows > 1 ? 52 : 0)
+          - splitRatio * 95
       });
     });
 
@@ -2159,6 +2160,8 @@ function initSpriteTool() {
           - splitRatio * 130
           + (frameHeight === 48 ? 18 : 0)
           + (frameWidth === 64 ? 16 : 0)
+          + (isWideStrip && rows === 1 ? 72 : 0)
+          - (isWideStrip && rows > 1 ? 52 : 0)
           + (frameWidth === presetSourceWidth && frameHeight === presetSourceHeight ? 8 : 0)
       });
     });
