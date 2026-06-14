@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Free browser-based thumbnail and profile image editor for YouTube, Instagram, X, TikTok, Steam, Google Play, Discord, and ID photos. Resize, preview, convert, and download images locally.">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="Easy Thumbnail Editor">
+    <meta name="theme-color" content="#101418">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Easy Thumbnail Editor - Free SNS and Store Image Preview Tool">
+    <meta property="og:description" content="Resize and preview thumbnails, profile photos, Steam store assets, Google Play images, and ID photos directly in your browser.">
+    <meta property="og:url" content="https://example.com/">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Easy Thumbnail Editor">
+    <meta name="twitter:description" content="Free browser-based thumbnail, profile, and store image converter with live previews.">
+    <title>Easy Thumbnail Editor - Free Thumbnail, Profile, and Store Image Preview Tool</title>
+    <link rel="stylesheet" href="styles.css">
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Easy Thumbnail Editor",
+        "applicationCategory": "DesignApplication",
+        "operatingSystem": "Web",
+        "description": "A browser-based image editor for resizing, previewing, converting, and downloading thumbnails, profile photos, store assets, and ID photos.",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      }
+    </script>
+  </head>
+  <body data-theme="dark">
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Easy Thumbnail Editor</p>
+        <h1 data-i18n="appTitle">Easy Thumbnail Editor</h1>
+      </div>
+      <div class="header-actions">
+        <div class="mini-switch" aria-label="Theme selector">
+          <button class="switch-button" type="button" data-theme-option="white" data-i18n="themeWhite">White</button>
+          <button class="switch-button" type="button" data-theme-option="ivory" data-i18n="themeIvory">Ivory</button>
+          <button class="switch-button is-active" type="button" data-theme-option="dark" data-i18n="themeDark">Dark</button>
+        </div>
+        <div class="mini-switch" aria-label="Language selector">
+          <button class="switch-button is-active" type="button" data-lang-option="en">EN</button>
+          <button class="switch-button" type="button" data-lang-option="ko">한국어</button>
+        </div>
+        <button class="ghost-button" id="resetButton" type="button" data-i18n="reset">Reset</button>
+        <button class="primary-button" id="downloadButton" type="button" data-i18n="download">Download Export</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="tool-panel" aria-label="Editor controls">
+        <div class="upload-zone" id="dropZone">
+          <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+          <input id="profileFileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+          <button class="guide-open-button" id="guideOpenButton" type="button" data-i18n="guideBadge">Open guide</button>
+          <div class="upload-splits">
+            <button class="upload-button" id="uploadButton" type="button" data-upload-slot="main" data-i18n="uploadMain">Main Image</button>
+            <button class="upload-button secondary" id="profileUploadButton" type="button" data-upload-slot="profile" data-i18n="uploadProfile">Profile / Icon</button>
+          </div>
+          <button class="auto-fit-toggle is-active" id="autoFitButton" type="button" aria-pressed="true">
+            <span data-i18n="autoFit">Auto Ratio / Size</span>
+            <strong data-i18n="autoOn">ON</strong>
+          </button>
+          <div class="slot-statuses">
+            <span id="mainSlotStatus" data-i18n="slotEmpty">Empty</span>
+            <span id="profileSlotStatus" data-i18n="slotEmpty">Empty</span>
+          </div>
+          <p data-i18n="uploadHelp">Drop or choose a PNG, JPG, WEBP, or GIF image.</p>
+        </div>
+
+        <div class="control-group">
+          <div class="group-title">
+            <h2 data-i18n="presetTitle">Preset</h2>
+            <span id="presetMeta">1280 x 720</span>
+          </div>
+          <div id="presetButtons" class="preset-groups" aria-label="Preview presets"></div>
+        </div>
+
+        <div class="control-group">
+          <div class="group-title">
+            <h2 data-i18n="manualTitle">Manual Position / Size</h2>
+            <button class="text-button" id="fitButton" type="button" data-i18n="fit">Fit</button>
+          </div>
+          <div class="grid-controls">
+            <label>X <input id="offsetX" type="number" step="1" value="0"></label>
+            <label>Y <input id="offsetY" type="number" step="1" value="0"></label>
+            <label><span data-i18n="imageWidth">Image Width</span><input id="imageWidth" type="number" step="1" min="1" value="1280"></label>
+            <label><span data-i18n="imageHeight">Image Height</span><input id="imageHeight" type="number" step="1" min="1" value="720"></label>
+          </div>
+          <label class="range-label">
+            <span data-i18n="scale">Scale</span>
+            <input id="scaleRange" type="range" min="10" max="300" value="100">
+          </label>
+        </div>
+
+        <div class="control-group">
+          <div class="group-title">
+            <h2 data-i18n="canvasTitle">Output Canvas</h2>
+            <span data-i18n="canvasNote">Editable on Custom preset</span>
+          </div>
+          <div class="grid-controls">
+            <label><span data-i18n="targetWidth">Target Width</span><input id="targetWidthInput" type="number" step="1" min="1" value="1280"></label>
+            <label><span data-i18n="targetHeight">Target Height</span><input id="targetHeightInput" type="number" step="1" min="1" value="720"></label>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <div class="group-title">
+            <h2 data-i18n="formatTitle">File Conversion</h2>
+            <span id="fileEstimate">-</span>
+          </div>
+          <div class="segmented" role="radiogroup" aria-label="File format">
+            <label><input type="radio" name="format" value="image/jpeg" checked> JPG</label>
+            <label><input type="radio" name="format" value="image/png"> PNG</label>
+            <label><input type="radio" name="format" value="image/webp"> WEBP</label>
+          </div>
+          <label class="range-label">
+            <span data-i18n="quality">Quality</span>
+            <input id="qualityRange" type="range" min="40" max="100" value="92">
+          </label>
+        </div>
+
+        <div class="control-group id-photo-panel" id="idPhotoPanel" hidden>
+          <div class="group-title">
+            <h2 data-i18n="idPhotoTitle">ID Photo</h2>
+            <span data-i18n="idPhotoNote">Free upload and save size</span>
+          </div>
+          <div class="grid-controls">
+            <label><span data-i18n="targetWidth">Target Width</span><input id="idPhotoWidth" type="number" min="1" step="1" value="103"></label>
+            <label><span data-i18n="targetHeight">Target Height</span><input id="idPhotoHeight" type="number" min="1" step="1" value="132"></label>
+            <label><span data-i18n="idPhotoUnit">Unit</span><select id="idPhotoUnit"><option value="px">px</option><option value="cm">cm</option></select></label>
+            <label><span data-i18n="idPhotoDpi">DPI</span><input id="idPhotoDpi" type="number" min="72" step="1" value="300"></label>
+            <label><span data-i18n="idPhotoMaxSize">Save Capacity</span><select id="idPhotoMaxSize"><option value="0">Original</option><option value="102400">100 KB</option><option value="307200">300 KB</option><option value="512000">500 KB</option><option value="1048576">1 MB</option></select></label>
+            <label><span data-i18n="quality">Quality</span><input id="idPhotoQuality" type="range" min="40" max="100" value="92"></label>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <div class="group-title">
+            <h2 data-i18n="exportInfo">Export Info</h2>
+          </div>
+          <dl class="spec-list">
+            <div><dt data-i18n="targetSizeLabel">Target Size</dt><dd id="targetSize">1280 x 720 px</dd></div>
+            <div><dt data-i18n="previewLabel">Preview</dt><dd id="previewKind">YouTube video thumbnail</dd></div>
+            <div><dt data-i18n="sourceLabel">Source</dt><dd id="sourceInfo">No image</dd></div>
+          </dl>
+        </div>
+      </section>
+
+      <section class="canvas-stage" aria-label="Editor canvas">
+        <div class="stage-toolbar">
+          <div class="stage-title-group">
+            <strong id="stageTitle">YouTube Thumbnail</strong>
+            <span data-i18n="dragHelp">Drag on canvas to reposition</span>
+          </div>
+          <div class="stage-tools" id="stageOrientationControls" hidden>
+            <span data-i18n="orientationTitle">Google Play Mode</span>
+            <div class="segmented compact" role="radiogroup" aria-label="Google Play orientation">
+              <label><input type="radio" name="orientation" value="landscape" checked> <span data-i18n="landscape">Landscape</span></label>
+              <label><input type="radio" name="orientation" value="portrait"> <span data-i18n="portrait">Portrait</span></label>
+            </div>
+          </div>
+          <div class="stage-tools converter-export-tools" id="converterExportControls" hidden>
+            <span data-i18n="converterExportTitle">Save target</span>
+            <div class="segmented compact" role="radiogroup" aria-label="Converter export mode">
+              <label><input type="radio" name="exportMode" value="single" checked> <span data-i18n="exportSingle">Profile photo</span></label>
+              <label><input type="radio" name="exportMode" value="split3x3"> <span data-i18n="exportSplit">3x3 converter</span></label>
+            </div>
+          </div>
+        </div>
+        <div class="stage-steam-assets" id="steamStorePanel" hidden>
+          <div class="group-title">
+            <h2 data-i18n="steamStoreNote">Official asset sizes</h2>
+            <span data-i18n="steamStoreTitle">Steam Store</span>
+          </div>
+          <div class="steam-asset-list" id="steamAssetButtons" aria-label="Steam store asset type"></div>
+        </div>
+        <div class="canvas-shell" id="canvasDropZone" data-upload-slot="main">
+          <canvas id="editorCanvas" width="1280" height="720"></canvas>
+        </div>
+      </section>
+
+      <aside class="preview-panel" aria-label="Live previews">
+        <div class="preview-header">
+          <h2 data-i18n="previewTitle">Live Preview</h2>
+          <span id="previewCount">0 ready</span>
+        </div>
+        <div class="preview-asset-banner" id="previewAssetBanner">
+          <span id="previewAssetLabel">Editing</span>
+          <strong id="previewAssetTitle">YouTube Thumbnail</strong>
+        </div>
+        <div class="preview-list" id="previewList"></div>
+      </aside>
+    </main>
+
+    <footer class="site-footer">
+      <nav aria-label="Site information">
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="terms.html">Terms</a>
+        <a href="contact.html">Contact</a>
+        <a href="sitemap.xml">Sitemap</a>
+      </nav>
+      <p>Easy Thumbnail Editor processes uploaded images locally in your browser for preview and export.</p>
+      <p>Creator: 타순이야마카다 · Discord: ddeongsu_</p>
+    </footer>
+
+    <div class="guide-overlay" id="guideOverlay" hidden></div>
+    <aside class="guide-drawer" id="guideDrawer" aria-label="Service guide" aria-hidden="true">
+      <div class="guide-drawer-head">
+        <div>
+          <span data-i18n="guideBadge">Open guide</span>
+          <strong data-i18n="guideTitle">Thumbnail editor guide</strong>
+        </div>
+        <button class="guide-close-button" id="guideCloseButton" type="button" aria-label="Close guide">x</button>
+      </div>
+      <div class="guide-content">
+        <section class="guide-block">
+          <h2 data-i18n="guideFeatureTitle">What this editor does</h2>
+          <p data-i18n="guideFeatureText">Create platform-ready images for profile photos, Steam store assets, Google Play listings, ID photos, and custom sizes. The live preview shows how the image will look before export.</p>
+        </section>
+        <section class="guide-block">
+          <h2 data-i18n="guideHowTitle">Basic workflow</h2>
+          <ol>
+            <li data-i18n="guideHowStep1">Choose the platform or image type from the preset list.</li>
+            <li data-i18n="guideHowStep2">Upload a main image, and upload a profile/icon image when the preset needs one.</li>
+            <li data-i18n="guideHowStep3">Use auto ratio for one-touch fitting, or click the canvas image to drag and resize it manually.</li>
+            <li data-i18n="guideHowStep4">Check the live preview, choose JPG, PNG, or WEBP, then download the finished file.</li>
+          </ol>
+        </section>
+        <section class="guide-block">
+          <h2 data-i18n="guideTabsTitle">Preset tabs explained</h2>
+          <ul>
+            <li data-i18n="guideTabYoutube">YouTube Profile: prepares a square channel profile image and shows a channel-style preview.</li>
+            <li data-i18n="guideTabSns">Instagram, X, TikTok, Discord, Steam Profile: checks circular avatar cropping in realistic profile layouts.</li>
+            <li data-i18n="guideTabSteam">Steam Store: converts artwork to official capsule, screenshot, background, and bundle header sizes with store-like previews.</li>
+            <li data-i18n="guideTabPlay">Google Play: previews app icon, feature graphic, and phone screenshots in a Play Store listing style.</li>
+            <li data-i18n="guideTabId">ID Photo: resizes a free-uploaded photo and lets you control pixel/cm size, DPI, quality, and target file capacity.</li>
+            <li data-i18n="guideTabCustom">Custom Size: lets you enter your own width and height for ads, blogs, banners, or other uploads.</li>
+          </ul>
+        </section>
+        <section class="guide-block">
+          <h2 data-i18n="guideFaqTitle">Frequently asked questions</h2>
+          <dl class="guide-faq">
+            <dt data-i18n="guideFaqQ1">Are my uploaded images sent to a server?</dt>
+            <dd data-i18n="guideFaqA1">No. Editing happens in your browser canvas, so the image is processed locally on this page.</dd>
+            <dt data-i18n="guideFaqQ2">Why does auto ratio sometimes add a soft background?</dt>
+            <dd data-i18n="guideFaqA2">When the original ratio is different from the target, the editor keeps the full image visible and fills the remaining area with a blurred background.</dd>
+            <dt data-i18n="guideFaqQ3">Can I manually adjust the crop?</dt>
+            <dd data-i18n="guideFaqA3">Yes. Click the image on the canvas, drag it to move, or drag the handles to resize it.</dd>
+            <dt data-i18n="guideFaqQ4">Which file format should I download?</dt>
+            <dd data-i18n="guideFaqA4">Use JPG for small store images, PNG for sharp logos or transparent-looking artwork, and WEBP when you want a compact modern file.</dd>
+          </dl>
+        </section>
+        <section class="guide-block">
+          <h2 data-i18n="guideTipTitle">Practical tips</h2>
+          <ul>
+            <li data-i18n="guideTip1">Start with an image larger than the target size to avoid blurry exports.</li>
+            <li data-i18n="guideTip2">Keep faces, logos, and important text away from the edge because profile circles and store cards can crop corners.</li>
+            <li data-i18n="guideTip3">For Steam assets, select the exact asset type first, then upload or refit the image so the canvas uses the correct official size.</li>
+            <li data-i18n="guideTip4">Before downloading, check both the editor canvas and the live preview because each platform displays images differently.</li>
+          </ul>
+        </section>
+      </div>
+    </aside>
+
+    <script src="app.js"></script>
+  </body>
+</html>
