@@ -1896,7 +1896,8 @@ function initSpriteTool() {
     zoom: 1,
     animationTimer: null,
     animationIndex: 0,
-    showTransformOverlay: false
+    showTransformOverlay: false,
+    pendingScrollToStart: false
   };
 
   spriteEls.tabs.forEach((button) => {
@@ -1975,9 +1976,10 @@ function initSpriteTool() {
     event.preventDefault();
     const direction = event.deltaY > 0 ? -1 : 1;
     const factor = direction > 0 ? 1.12 : 0.88;
+    const oldZoom = spriteState.zoom;
     spriteState.zoom = clampSpriteZoom(spriteState.zoom * factor);
     spriteEls.zoomInput.value = String(Math.round(spriteState.zoom * 100));
-    applySpriteCanvasZoom();
+    applySpriteCanvasZoom({ clientX: event.clientX, clientY: event.clientY, oldZoom });
   }, { passive: false });
   [
     ...document.querySelectorAll("input[name='spriteAnchor'], input[name='spriteFit']"),
@@ -2724,13 +2726,33 @@ function initSpriteTool() {
     const maxHeight = 520;
     spriteState.zoom = clampSpriteZoom(Math.min(maxWidth / width, maxHeight / height, 6));
     spriteEls.zoomInput.value = String(Math.round(spriteState.zoom * 100));
+    spriteState.pendingScrollToStart = true;
   }
 
-  function applySpriteCanvasZoom() {
+  function applySpriteCanvasZoom(anchor = null) {
     const width = spriteEls.canvas.width || getSpriteWidth();
     const height = spriteEls.canvas.height || getSpriteHeight();
+    const oldZoom = anchor?.oldZoom || spriteState.zoom;
+    const canvasRect = spriteEls.canvas.getBoundingClientRect();
+    const wrapRect = spriteEls.canvasWrap.getBoundingClientRect();
+    const canvasPoint = anchor ? {
+      x: (anchor.clientX - canvasRect.left) / oldZoom,
+      y: (anchor.clientY - canvasRect.top) / oldZoom,
+      viewportX: anchor.clientX - wrapRect.left,
+      viewportY: anchor.clientY - wrapRect.top
+    } : null;
     spriteEls.canvas.style.width = `${Math.max(1, Math.round(width * spriteState.zoom))}px`;
     spriteEls.canvas.style.height = `${Math.max(1, Math.round(height * spriteState.zoom))}px`;
+    if (canvasPoint) {
+      const nextLeft = spriteEls.canvas.offsetLeft + canvasPoint.x * spriteState.zoom - canvasPoint.viewportX;
+      const nextTop = spriteEls.canvas.offsetTop + canvasPoint.y * spriteState.zoom - canvasPoint.viewportY;
+      spriteEls.canvasWrap.scrollLeft = Math.max(0, nextLeft);
+      spriteEls.canvasWrap.scrollTop = Math.max(0, nextTop);
+    } else if (spriteState.pendingScrollToStart) {
+      spriteEls.canvasWrap.scrollLeft = 0;
+      spriteEls.canvasWrap.scrollTop = 0;
+      spriteState.pendingScrollToStart = false;
+    }
     updateSpriteCanvasInfo(width, height);
   }
 
