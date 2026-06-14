@@ -1864,15 +1864,15 @@ function initSpriteTool() {
   const spriteCtx = spriteEls.canvas.getContext("2d");
   const actionCtx = spriteEls.actionCanvas?.getContext("2d");
   const spritePresets = [
-    { id: "unity-64", label: "Unity 2D", size: "64 x 64", width: 64, height: 64, anchor: "bottom" },
-    { id: "unity-128", label: "Unity HD", size: "128 x 128", width: 128, height: 128, anchor: "bottom" },
-    { id: "unreal-128", label: "Unreal Paper2D", size: "128 x 128", width: 128, height: 128, anchor: "bottom" },
-    { id: "godot-32", label: "Godot Pixel", size: "32 x 32", width: 32, height: 32, anchor: "bottom" },
-    { id: "godot-64", label: "Godot Character", size: "64 x 64", width: 64, height: 64, anchor: "bottom" },
-    { id: "rpg-maker-mv", label: "RPG Maker MV/MZ", size: "48 x 48", width: 48, height: 48, anchor: "bottom" },
-    { id: "rpg-maker-xp", label: "RPG Maker XP", size: "32 x 48", width: 32, height: 48, anchor: "bottom" },
-    { id: "nekoland-96", label: "Nekoland", size: "96 x 96", width: 96, height: 96, anchor: "bottom" },
-    { id: "custom", label: "Custom", size: "Direct input", width: 64, height: 64, anchor: "center" }
+    { id: "unity-64", label: "Unity 2D", size: "64 x 64", width: 64, height: 64, sourceWidth: 64, sourceHeight: 64, anchor: "bottom" },
+    { id: "unity-128", label: "Unity HD", size: "128 x 128", width: 128, height: 128, sourceWidth: 128, sourceHeight: 128, anchor: "bottom" },
+    { id: "unreal-128", label: "Unreal Paper2D", size: "128 x 128", width: 128, height: 128, sourceWidth: 128, sourceHeight: 128, anchor: "bottom" },
+    { id: "godot-32", label: "Godot Pixel", size: "32 x 32", width: 32, height: 32, sourceWidth: 32, sourceHeight: 32, anchor: "bottom" },
+    { id: "godot-64", label: "Godot Character", size: "64 x 64", width: 64, height: 64, sourceWidth: 64, sourceHeight: 64, anchor: "bottom" },
+    { id: "rpg-maker-mv", label: "RPG Maker MV/MZ", size: "48 x 48", width: 48, height: 48, sourceWidth: 48, sourceHeight: 48, anchor: "bottom" },
+    { id: "rpg-maker-xp", label: "RPG Maker XP", size: "32 x 48", width: 32, height: 48, sourceWidth: 32, sourceHeight: 48, anchor: "bottom" },
+    { id: "nekoland-96", label: "Nekoland", size: "96 x 96", width: 96, height: 96, sourceWidth: 32, sourceHeight: 48, anchor: "bottom" },
+    { id: "custom", label: "Custom", size: "Direct input", width: 64, height: 64, sourceWidth: 64, sourceHeight: 64, anchor: "center" }
   ];
 
   const spriteState = {
@@ -1935,6 +1935,8 @@ function initSpriteTool() {
     spriteState.preset = preset;
     spriteEls.widthInput.value = preset.width;
     spriteEls.heightInput.value = preset.height;
+    spriteEls.sourceWidthInput.value = preset.sourceWidth || preset.width;
+    spriteEls.sourceHeightInput.value = preset.sourceHeight || preset.height;
     const anchor = document.querySelector(`input[name="spriteAnchor"][value="${preset.anchor}"]`);
     if (anchor) anchor.checked = true;
     renderSpritePresetButtons();
@@ -2016,9 +2018,11 @@ function initSpriteTool() {
   }
 
   function autoDetectSpriteSourceFrame() {
+    const presetSourceWidth = spriteState.preset.sourceWidth || getSpriteWidth();
+    const presetSourceHeight = spriteState.preset.sourceHeight || getSpriteHeight();
     if (!spriteState.image) {
-      spriteEls.sourceWidthInput.value = String(getSpriteWidth());
-      spriteEls.sourceHeightInput.value = String(getSpriteHeight());
+      spriteEls.sourceWidthInput.value = String(presetSourceWidth);
+      spriteEls.sourceHeightInput.value = String(presetSourceHeight);
       return;
     }
     const targetWidth = getSpriteWidth();
@@ -2026,6 +2030,12 @@ function initSpriteTool() {
     const sourceWidth = spriteState.image.naturalWidth;
     const sourceHeight = spriteState.image.naturalHeight;
     const candidates = [];
+
+    if (sourceWidth % presetSourceWidth === 0 && sourceHeight % presetSourceHeight === 0) {
+      spriteEls.sourceWidthInput.value = String(presetSourceWidth);
+      spriteEls.sourceHeightInput.value = String(presetSourceHeight);
+      return;
+    }
 
     for (let scale = 8; scale >= 1; scale -= 1) {
       const frameWidth = targetWidth * scale;
