@@ -2124,6 +2124,36 @@ dd {
   text-decoration: none;
 }
 
+.seo-content {
+  margin: 0 22px 22px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+  gap: 22px;
+}
+
+.seo-content h2 {
+  margin: 6px 0 10px;
+  font-size: 20px;
+}
+
+.seo-content p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+.seo-keyword-list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
 .static-page {
   min-height: 100vh;
   background: var(--bg);
@@ -2228,6 +2258,11 @@ dd {
   .workspace {
     padding: 12px;
     min-height: auto;
+  }
+
+  .seo-content {
+    margin: 0 12px 16px;
+    grid-template-columns: 1fr;
   }
 
   .canvas-shell {
